@@ -110,6 +110,29 @@ vorbis_header(GstAVDec *self,
 	return self->seq < 3;
 }
 
+static inline void
+calculate_timestamp(GstAVDec *self,
+		    GstBuffer *buf,
+		    GstBuffer *out_buf)
+{
+	gint64 samples;
+
+	samples = GST_BUFFER_SIZE(out_buf) / (self->av_ctx->channels * sizeof(int16_t));
+
+	if (GST_BUFFER_OFFSET_END_IS_VALID(buf))
+		self->granulepos = GST_BUFFER_OFFSET_END(buf);
+	else
+		self->granulepos += samples;
+
+	GST_BUFFER_OFFSET_END(out_buf) = self->granulepos;
+	GST_BUFFER_TIMESTAMP(out_buf) = gst_util_uint64_scale_int(self->granulepos - samples,
+								  GST_SECOND, self->av_ctx->sample_rate);
+	GST_BUFFER_DURATION(out_buf) = gst_util_uint64_scale_int(samples,
+								 GST_SECOND, self->av_ctx->sample_rate);
+	GST_BUFFER_OFFSET(out_buf) = gst_util_uint64_scale_int(self->granulepos,
+							       GST_SECOND, self->av_ctx->sample_rate);
+}
+
 static GstFlowReturn
 pad_chain(GstPad *pad,
 	  GstBuffer *buf)
@@ -167,6 +190,7 @@ pad_chain(GstPad *pad,
 		out_buf = gst_buffer_new();
 		GST_BUFFER_DATA(out_buf) = GST_BUFFER_MALLOCDATA(out_buf) = tmp;
 		GST_BUFFER_SIZE(out_buf) = buffer_size;
+		calculate_timestamp(self, buf, out_buf);
 		gst_buffer_set_caps(out_buf, GST_PAD_CAPS(self->srcpad));
 
 		ret = gst_pad_push(self->srcpad, out_buf);

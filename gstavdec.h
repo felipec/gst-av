@@ -47,6 +47,7 @@ struct GstAVDec {
 	int seq;
 	int header;
 	struct oggvorbis_private priv;
+	gint64 granulepos;
 };
 
 struct GstAVDecClass {
