@@ -173,22 +173,16 @@ pad_chain(GstPad *pad,
 	self->seq++;
 	if (self->header > -1 && self->seq > self->header) {
 		AVPacket pkt;
-		int buffer_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
-		void *tmp;
-
-		if (posix_memalign(&tmp, 16, buffer_size) != 0) {
-			ret = GST_FLOW_ERROR;
-			goto leave;
-		}
+		int buffer_size = self->pkt.size;
 
 		av_init_packet(&pkt);
 		pkt.data = GST_BUFFER_DATA(buf);
 		pkt.size = GST_BUFFER_SIZE(buf);
-		avcodec_decode_audio3(self->av_ctx, tmp, &buffer_size, &pkt);
+		avcodec_decode_audio3(self->av_ctx, (void *) self->pkt.data, &buffer_size, &pkt);
 
 		GstBuffer *out_buf;
 		out_buf = gst_buffer_new();
-		GST_BUFFER_DATA(out_buf) = GST_BUFFER_MALLOCDATA(out_buf) = tmp;
+		GST_BUFFER_DATA(out_buf) = self->pkt.data;
 		GST_BUFFER_SIZE(out_buf) = buffer_size;
 		calculate_timestamp(self, buf, out_buf);
 		gst_buffer_set_caps(out_buf, GST_PAD_CAPS(self->srcpad));
@@ -219,6 +213,7 @@ change_state(GstElement *element,
 			self->av_ctx = avcodec_alloc_context();
 			self->header = -1;
 			self->seq = 0;
+			av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
 			break;
 
 		default:
@@ -232,6 +227,7 @@ change_state(GstElement *element,
 
 	switch (transition) {
 		case GST_STATE_CHANGE_READY_TO_NULL:
+			av_free_packet(&self->pkt);
 			/** @todo how exactly do we do this? */
 #if 0
 			if (self->av_ctx)
