@@ -30,6 +30,8 @@
 
 static GstElementClass *parent_class;
 
+#define BUFFER_SIZE 0x2000
+
 static unsigned int
 fixup_vorbis_headers(struct oggvorbis_private *priv,
 		     uint8_t **buf)
@@ -173,21 +175,35 @@ pad_chain(GstPad *pad,
 	self->seq++;
 	if (self->header > -1 && self->seq > self->header) {
 		AVPacket pkt;
+		void *buffer_data = self->pkt.data + self->ring.in;
 		int buffer_size = self->pkt.size;
 
 		av_init_packet(&pkt);
 		pkt.data = GST_BUFFER_DATA(buf);
 		pkt.size = GST_BUFFER_SIZE(buf);
-		avcodec_decode_audio3(self->av_ctx, (void *) self->pkt.data, &buffer_size, &pkt);
+		avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
-		GstBuffer *out_buf;
-		out_buf = gst_buffer_new();
-		GST_BUFFER_DATA(out_buf) = self->pkt.data;
-		GST_BUFFER_SIZE(out_buf) = buffer_size;
-		calculate_timestamp(self, buf, out_buf);
-		gst_buffer_set_caps(out_buf, GST_PAD_CAPS(self->srcpad));
+		self->ring.in += buffer_size;
+		if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE - 0x2000) {
+			memcpy(self->pkt.data,
+			       self->pkt.data + self->ring.out,
+			       self->ring.in - self->ring.out);
+			self->ring.in -= self->ring.out;
+			self->ring.out = 0;
+		}
 
-		ret = gst_pad_push(self->srcpad, out_buf);
+		if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
+			GstBuffer *out_buf;
+			out_buf = gst_buffer_new();
+			GST_BUFFER_DATA(out_buf) = self->pkt.data + self->ring.out;
+			GST_BUFFER_SIZE(out_buf) = BUFFER_SIZE;
+			calculate_timestamp(self, buf, out_buf);
+			gst_buffer_set_caps(out_buf, GST_PAD_CAPS(self->srcpad));
+
+			self->ring.out += GST_BUFFER_SIZE(out_buf);
+
+			ret = gst_pad_push(self->srcpad, out_buf);
+		}
 	}
 
 leave:

@@ -39,6 +39,10 @@ struct oggvorbis_private {
 	unsigned char *packet[3];
 };
 
+struct ring {
+	int in, out;
+};
+
 struct GstAVDec {
 	GstElement element;
 	GstPad *sinkpad, *srcpad;
@@ -49,6 +53,7 @@ struct GstAVDec {
 	struct oggvorbis_private priv;
 	gint64 granulepos;
 	AVPacket pkt;
+	struct ring ring;
 };
 
 struct GstAVDecClass {
