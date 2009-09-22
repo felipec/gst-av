@@ -35,8 +35,8 @@ typedef struct GstAVDec GstAVDec;
 typedef struct GstAVDecClass GstAVDecClass;
 
 struct oggvorbis_private {
-    unsigned int len[3];
-    unsigned char *packet[3];
+	unsigned int len[3];
+	unsigned char *packet[3];
 };
 
 struct GstAVDec {

@@ -116,7 +116,6 @@ pad_chain(GstPad *pad,
 {
 	GstAVDec *self;
 	GstFlowReturn ret = GST_FLOW_OK;
-	GstBuffer *out_buf;
 
 	self = GST_AVDEC(GST_OBJECT_PARENT(pad));
 
@@ -154,19 +153,19 @@ pad_chain(GstPad *pad,
 		int buffer_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
 		void *tmp;
 
-		out_buf = gst_buffer_new();
 		if (posix_memalign(&tmp, 16, buffer_size) != 0) {
 			ret = GST_FLOW_ERROR;
 			goto leave;
 		}
 
-		GST_BUFFER_DATA(out_buf) = GST_BUFFER_MALLOCDATA(out_buf) = tmp;
-
 		av_init_packet(&pkt);
 		pkt.data = GST_BUFFER_DATA(buf);
 		pkt.size = GST_BUFFER_SIZE(buf);
-		avcodec_decode_audio3(self->av_ctx, (int16_t *) GST_BUFFER_DATA(out_buf), &buffer_size, &pkt);
+		avcodec_decode_audio3(self->av_ctx, tmp, &buffer_size, &pkt);
 
+		GstBuffer *out_buf;
+		out_buf = gst_buffer_new();
+		GST_BUFFER_DATA(out_buf) = GST_BUFFER_MALLOCDATA(out_buf) = tmp;
 		GST_BUFFER_SIZE(out_buf) = buffer_size;
 		gst_buffer_set_caps(out_buf, GST_PAD_CAPS(self->srcpad));
 
