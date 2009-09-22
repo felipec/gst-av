@@ -114,18 +114,13 @@ vorbis_header(GstAVDec *self,
 
 static inline void
 calculate_timestamp(GstAVDec *self,
-		    GstBuffer *buf,
 		    GstBuffer *out_buf)
 {
 	gint64 samples;
 
 	samples = GST_BUFFER_SIZE(out_buf) / (self->av_ctx->channels * sizeof(int16_t));
 
-	if (GST_BUFFER_OFFSET_END_IS_VALID(buf))
-		self->granulepos = GST_BUFFER_OFFSET_END(buf);
-	else
-		self->granulepos += samples;
-
+	self->granulepos += samples;
 	GST_BUFFER_OFFSET_END(out_buf) = self->granulepos;
 	GST_BUFFER_TIMESTAMP(out_buf) = gst_util_uint64_scale_int(self->granulepos - samples,
 								  GST_SECOND, self->av_ctx->sample_rate);
@@ -192,12 +187,15 @@ pad_chain(GstPad *pad,
 			self->ring.out = 0;
 		}
 
+		if (GST_BUFFER_OFFSET_END_IS_VALID(buf))
+			self->granulepos = GST_BUFFER_OFFSET_END(buf);
+
 		if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
 			GstBuffer *out_buf;
 			out_buf = gst_buffer_new();
 			GST_BUFFER_DATA(out_buf) = self->pkt.data + self->ring.out;
 			GST_BUFFER_SIZE(out_buf) = BUFFER_SIZE;
-			calculate_timestamp(self, buf, out_buf);
+			calculate_timestamp(self, out_buf);
 			gst_buffer_set_caps(out_buf, GST_PAD_CAPS(self->srcpad));
 
 			self->ring.out += GST_BUFFER_SIZE(out_buf);
