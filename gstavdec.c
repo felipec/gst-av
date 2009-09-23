@@ -120,14 +120,14 @@ calculate_timestamp(GstAVDec *self,
 
 	samples = GST_BUFFER_SIZE(out_buf) / (self->av_ctx->channels * sizeof(int16_t));
 
-	self->granulepos += samples;
+	GST_BUFFER_OFFSET(out_buf) = self->granulepos - samples;
 	GST_BUFFER_OFFSET_END(out_buf) = self->granulepos;
+
 	GST_BUFFER_TIMESTAMP(out_buf) = gst_util_uint64_scale_int(self->granulepos - samples,
 								  GST_SECOND, self->av_ctx->sample_rate);
 	GST_BUFFER_DURATION(out_buf) = gst_util_uint64_scale_int(samples,
 								 GST_SECOND, self->av_ctx->sample_rate);
-	GST_BUFFER_OFFSET(out_buf) = gst_util_uint64_scale_int(self->granulepos,
-							       GST_SECOND, self->av_ctx->sample_rate);
+	self->granulepos += samples;
 }
 
 static GstFlowReturn
