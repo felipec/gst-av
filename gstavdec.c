@@ -30,7 +30,7 @@
 
 static GstElementClass *parent_class;
 
-#define BUFFER_SIZE 0x2000
+#define BUFFER_SIZE 0x20000
 
 static unsigned int
 fixup_vorbis_headers(struct oggvorbis_private *priv,
