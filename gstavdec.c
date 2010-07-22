@@ -222,37 +222,6 @@ leave:
 	return ret;
 }
 
-static gboolean
-pad_query(GstPad *pad,
-		GstQuery *query)
-{
-	GstAVDec *self;
-	gboolean res = FALSE;
-
-	self = (GstAVDec *)((GstObject *)pad)->parent;
-
-	switch (query->type) {
-	case GST_QUERY_CONVERT: {
-		GstFormat src_fmt, dest_fmt;
-		gint64 src_val, dest_val;
-
-		gst_query_parse_convert(query, &src_fmt, &src_val, &dest_fmt, &dest_val);
-		if (src_fmt != GST_FORMAT_DEFAULT || dest_fmt != GST_FORMAT_TIME)
-			break;
-
-		dest_val = gst_util_uint64_scale_int(src_val, GST_SECOND, self->av_ctx->sample_rate);
-
-		gst_query_set_convert(query, src_fmt, src_val, dest_fmt, dest_val);
-		return TRUE;
-	}
-	default:
-		res = gst_pad_query_default(pad, query);
-		break;
-	}
-
-	return res;
-}
-
 static GstStateChangeReturn
 change_state(GstElement *element,
 		GstStateChange transition)
@@ -342,7 +311,6 @@ instance_init(GTypeInstance *instance,
 		gst_pad_new_from_template(gst_element_class_get_pad_template(element_class, "src"), "src");
 
 	gst_pad_use_fixed_caps(self->srcpad);
-	gst_pad_set_query_function(self->sinkpad, pad_query);
 
 	gst_element_add_pad((GstElement *)self, self->sinkpad);
 	gst_element_add_pad((GstElement *)self, self->srcpad);
