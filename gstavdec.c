@@ -11,6 +11,8 @@
 #include "gstavdec.h"
 #include "plugin.h"
 
+#include <gst/tag/tag.h>
+
 #include <stdlib.h>
 #include <string.h> /* for memcpy */
 
@@ -40,6 +42,14 @@ fixup_vorbis_headers(struct oggvorbis_private *priv,
 	}
 	*buf = g_realloc(*buf, offset + FF_INPUT_BUFFER_PADDING_SIZE);
 	return offset;
+}
+
+static void
+handle_comment(GstAVDec *self, GstBuffer *buf)
+{
+	GstTagList *list;
+	list = gst_tag_list_from_vorbiscomment_buffer(buf, (guint8 *) "\003vorbis", 7, NULL);
+	gst_element_found_tags_for_pad(GST_ELEMENT(self), self->srcpad, list);
 }
 
 static int
@@ -90,6 +100,7 @@ vorbis_header(GstAVDec *self,
 	}
 	else if (p[0] == 3) {
 		/* comment */
+		handle_comment(self, buf);
 	}
 	else {
 		/* extradata */
