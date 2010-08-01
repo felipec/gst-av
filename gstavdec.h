@@ -13,6 +13,8 @@
 #include <gst/gst.h>
 #include <libavcodec/avcodec.h>
 
+#include <stdbool.h>
+
 #define GST_AVDEC(obj) (GstAVDec *) (obj)
 #define GST_AVDEC_TYPE (gst_avdec_get_type())
 #define GST_AVDEC_CLASS(obj) (GstAVDecClass *) (obj)
@@ -34,8 +36,7 @@ struct GstAVDec {
 	GstPad *sinkpad, *srcpad;
 	AVCodec *codec;
 	AVCodecContext *av_ctx;
-	int seq;
-	int header;
+	bool got_header;
 	struct oggvorbis_private priv;
 	gint64 granulepos;
 	AVPacket pkt;

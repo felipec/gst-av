@@ -140,10 +140,10 @@ pad_chain(GstPad *pad,
 
 	self = GST_AVDEC(GST_OBJECT_PARENT(pad));
 
-	if (self->header < 0) {
+	if (!self->got_header) {
 		int hdr = vorbis_header(self, buf);
 		if (!hdr) {
-			self->header = self->seq;
+			self->got_header = true;
 			if (avcodec_open(self->av_ctx, self->codec) < 0) {
 				g_error("fail open");
 				ret = GST_FLOW_ERROR;
@@ -168,8 +168,7 @@ pad_chain(GstPad *pad,
 		}
 	}
 
-	self->seq++;
-	if (self->header > -1 && self->seq > self->header) {
+	if (self->got_header) {
 		AVPacket pkt;
 		void *buffer_data = self->pkt.data + self->ring.in;
 		int buffer_size = self->pkt.size;
@@ -257,8 +256,7 @@ change_state(GstElement *element,
 		if (!self->codec)
 			return GST_STATE_CHANGE_FAILURE;
 		self->av_ctx = avcodec_alloc_context();
-		self->header = -1;
-		self->seq = 0;
+		self->got_header = false;
 		av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
 		break;
 
