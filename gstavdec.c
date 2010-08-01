@@ -39,6 +39,7 @@ fixup_vorbis_headers(struct oggvorbis_private *priv,
 	for (i = 0; i < 3; i++) {
 		memcpy(&ptr[offset], priv->packet[i], priv->len[i]);
 		offset += priv->len[i];
+		g_free(priv->packet[i]);
 	}
 	*buf = g_realloc(*buf, offset + FF_INPUT_BUFFER_PADDING_SIZE);
 	return offset;
