@@ -62,33 +62,33 @@ handle_comment(GstAVDec *self, GstBuffer *buf)
 {
 	GstTagList *list;
 	list = gst_tag_list_from_vorbiscomment_buffer(buf, (guint8 *) "\003vorbis", 7, NULL);
-	gst_element_found_tags_for_pad(GST_ELEMENT(self), self->srcpad, list);
+	gst_element_found_tags_for_pad((GstElement *)self, self->srcpad, list);
 }
 
 static int
 vorbis_header(GstAVDec *self,
 		GstBuffer *buf)
 {
-	const uint8_t *p = GST_BUFFER_DATA(buf);
+	const uint8_t *p = buf->data;
 	struct oggvorbis_private *priv = &self->priv;
 	int pkt_type = *p;
 
 	if (!(pkt_type & 1))
 		return 0;
 
-	if (GST_BUFFER_SIZE(buf) < 1 || pkt_type > 5)
+	if (buf->size < 1 || pkt_type > 5)
 		return -1;
 
-	priv->len[pkt_type >> 1] = GST_BUFFER_SIZE(buf);
-	priv->packet[pkt_type >> 1] = g_malloc0(GST_BUFFER_SIZE(buf));
-	memcpy(priv->packet[pkt_type >> 1], GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
+	priv->len[pkt_type >> 1] = buf->size;
+	priv->packet[pkt_type >> 1] = g_malloc0(buf->size);
+	memcpy(priv->packet[pkt_type >> 1], buf->data, buf->size);
 
 	if (pkt_type == 1) {
 		/* tag */
 		unsigned blocksize, bs0, bs1;
 		p += 7; /* skip "\001vorbis" tag */
 
-		if (GST_BUFFER_SIZE(buf) != 30)
+		if (buf->size != 30)
 			return -1;
 
 		if (get_le32(&p) != 0)
@@ -131,14 +131,14 @@ calculate_timestamp(GstAVDec *self,
 {
 	gint64 samples;
 
-	samples = GST_BUFFER_SIZE(out_buf) / (self->av_ctx->channels * sizeof(int16_t));
+	samples = out_buf->size / (self->av_ctx->channels * sizeof(int16_t));
 
-	GST_BUFFER_OFFSET(out_buf) = self->granulepos - samples;
-	GST_BUFFER_OFFSET_END(out_buf) = self->granulepos;
+	out_buf->offset = self->granulepos - samples;
+	out_buf->offset_end = self->granulepos;
 
-	GST_BUFFER_TIMESTAMP(out_buf) = gst_util_uint64_scale_int(self->granulepos - samples,
+	out_buf->timestamp = gst_util_uint64_scale_int(self->granulepos - samples,
 			GST_SECOND, self->av_ctx->sample_rate);
-	GST_BUFFER_DURATION(out_buf) = gst_util_uint64_scale_int(samples,
+	out_buf->duration = gst_util_uint64_scale_int(samples,
 			GST_SECOND, self->av_ctx->sample_rate);
 	self->granulepos += samples;
 }
@@ -150,7 +150,7 @@ pad_chain(GstPad *pad,
 	GstAVDec *self;
 	GstFlowReturn ret = GST_FLOW_OK;
 
-	self = GST_AVDEC(GST_OBJECT_PARENT(pad));
+	self = (GstAVDec *)((GstObject *)pad)->parent;
 
 	if (!self->got_header) {
 		int hdr = vorbis_header(self, buf);
@@ -186,8 +186,8 @@ pad_chain(GstPad *pad,
 		int buffer_size = self->pkt.size;
 
 		av_init_packet(&pkt);
-		pkt.data = GST_BUFFER_DATA(buf);
-		pkt.size = GST_BUFFER_SIZE(buf);
+		pkt.data = buf->data;
+		pkt.size = buf->size;
 		avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
 		self->ring.in += buffer_size;
@@ -199,18 +199,18 @@ pad_chain(GstPad *pad,
 			self->ring.out = 0;
 		}
 
-		if (GST_BUFFER_OFFSET_END_IS_VALID(buf))
-			self->granulepos = GST_BUFFER_OFFSET_END(buf);
+		if (buf->offset_end != GST_BUFFER_OFFSET_NONE)
+			self->granulepos = buf->offset_end;
 
 		if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
 			GstBuffer *out_buf;
 			out_buf = gst_buffer_new();
-			GST_BUFFER_DATA(out_buf) = self->pkt.data + self->ring.out;
-			GST_BUFFER_SIZE(out_buf) = BUFFER_SIZE;
+			out_buf->data = self->pkt.data + self->ring.out;
+			out_buf->size = BUFFER_SIZE;
 			calculate_timestamp(self, out_buf);
-			gst_buffer_set_caps(out_buf, GST_PAD_CAPS(self->srcpad));
+			gst_buffer_set_caps(out_buf, self->srcpad->caps);
 
-			self->ring.out += GST_BUFFER_SIZE(out_buf);
+			self->ring.out += out_buf->size;
 
 			ret = gst_pad_push(self->srcpad, out_buf);
 		}
@@ -229,9 +229,9 @@ pad_query(GstPad *pad,
 	GstAVDec *self;
 	gboolean res = FALSE;
 
-	self = GST_AVDEC(GST_PAD_PARENT(pad));
+	self = (GstAVDec *)((GstObject *)pad)->parent;
 
-	switch (GST_QUERY_TYPE(query)) {
+	switch (query->type) {
 	case GST_QUERY_CONVERT: {
 		GstFormat src_fmt, dest_fmt;
 		gint64 src_val, dest_val;
@@ -260,7 +260,7 @@ change_state(GstElement *element,
 	GstStateChangeReturn ret;
 	GstAVDec *self;
 
-	self = GST_AVDEC(element);
+	self = (GstAVDec *)element;
 
 	switch (transition) {
 	case GST_STATE_CHANGE_NULL_TO_READY:
@@ -276,7 +276,7 @@ change_state(GstElement *element,
 		break;
 	}
 
-	ret = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
+	ret = parent_class->change_state(element, transition);
 
 	if (ret == GST_STATE_CHANGE_FAILURE)
 		return ret;
@@ -330,11 +330,8 @@ static void
 instance_init(GTypeInstance *instance,
 		gpointer g_class)
 {
-	GstAVDec *self;
-	GstElementClass *element_class;
-
-	element_class = GST_ELEMENT_CLASS(g_class);
-	self = GST_AVDEC(instance);
+	GstAVDec *self = (GstAVDec *)instance;
+	GstElementClass *element_class = g_class;
 
 	self->sinkpad =
 		gst_pad_new_from_template(gst_element_class_get_pad_template(element_class, "sink"), "sink");
@@ -347,18 +344,16 @@ instance_init(GTypeInstance *instance,
 	gst_pad_use_fixed_caps(self->srcpad);
 	gst_pad_set_query_function(self->sinkpad, pad_query);
 
-	gst_element_add_pad(GST_ELEMENT(self), self->sinkpad);
-	gst_element_add_pad(GST_ELEMENT(self), self->srcpad);
+	gst_element_add_pad((GstElement *)self, self->sinkpad);
+	gst_element_add_pad((GstElement *)self, self->srcpad);
 }
 
 static void
 base_init(gpointer g_class)
 {
-	GstElementClass *element_class;
+	GstElementClass *element_class = g_class;
 	GstPadTemplate *template;
 	GstElementDetails details;
-
-	element_class = GST_ELEMENT_CLASS(g_class);
 
 	details.longname = "avdec element";
 	details.klass = "Coder/Decoder/Audio";
@@ -384,9 +379,7 @@ static void
 class_init(gpointer g_class,
 		gpointer class_data)
 {
-	GstElementClass *gstelement_class;
-
-	gstelement_class = GST_ELEMENT_CLASS(g_class);
+	GstElementClass *gstelement_class = g_class;
 
 	parent_class = g_type_class_ref(GST_TYPE_ELEMENT);
 
