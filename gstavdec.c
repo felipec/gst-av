@@ -59,18 +59,19 @@ vorbis_header(GstAVDec *self,
 {
 	const uint8_t *p = GST_BUFFER_DATA(buf);
 	struct oggvorbis_private *priv = &self->priv;
+	int pkt_type = *p;
 
-	if (self->seq > 2)
+	if (!(pkt_type & 1))
 		return 0;
 
-	if (GST_BUFFER_SIZE(buf) < 1)
+	if (GST_BUFFER_SIZE(buf) < 1 || pkt_type > 5)
 		return -1;
 
-	priv->len[self->seq] = GST_BUFFER_SIZE(buf);
-	priv->packet[self->seq] = g_malloc0(GST_BUFFER_SIZE(buf));
-	memcpy(priv->packet[self->seq], GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
+	priv->len[pkt_type >> 1] = GST_BUFFER_SIZE(buf);
+	priv->packet[pkt_type >> 1] = g_malloc0(GST_BUFFER_SIZE(buf));
+	memcpy(priv->packet[pkt_type >> 1], GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
 
-	if (p[0] == 1) {
+	if (pkt_type == 1) {
 		/* tag */
 		unsigned blocksize, bs0, bs1;
 		p += 7; /* skip "\001vorbis" tag */
@@ -99,7 +100,7 @@ vorbis_header(GstAVDec *self,
 		if (GST_READ_UINT8(p) != 1)
 			return -1;
 	}
-	else if (p[0] == 3) {
+	else if (pkt_type == 3) {
 		/* comment */
 		handle_comment(self, buf);
 	}
@@ -109,7 +110,7 @@ vorbis_header(GstAVDec *self,
 			fixup_vorbis_headers(&self->priv, &self->av_ctx->extradata);
 	}
 
-	return self->seq < 3;
+	return 1;
 }
 
 static inline void
