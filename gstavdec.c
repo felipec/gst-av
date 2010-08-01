@@ -22,6 +22,18 @@ static GstElementClass *parent_class;
 
 #define BUFFER_SIZE 0x20000
 
+static inline uint8_t get_byte(const uint8_t **b)
+{
+	return *((*b)++);
+}
+
+static inline uint32_t get_le32(const uint8_t **b)
+{
+	struct unaligned_32 { uint32_t l; } __attribute__((packed));
+	*b += sizeof(uint32_t);
+	return ((const struct unaligned_32 *)(*b - sizeof(uint32_t)))->l;
+}
+
 static unsigned int
 fixup_vorbis_headers(struct oggvorbis_private *priv,
 		uint8_t **buf)
@@ -79,16 +91,16 @@ vorbis_header(GstAVDec *self,
 		if (GST_BUFFER_SIZE(buf) != 30)
 			return -1;
 
-		if (GST_READ_UINT32_LE(p) != 0)
+		if (get_le32(&p) != 0)
 			return -1;
 
-		self->av_ctx->channels = GST_READ_UINT8(p);
-		self->av_ctx->sample_rate = GST_READ_UINT32_LE(p);
+		self->av_ctx->channels = get_byte(&p);
+		self->av_ctx->sample_rate = get_le32(&p);
 		p += 4; /* max bitrate */
-		self->av_ctx->bit_rate = GST_READ_UINT32_LE(p);
+		self->av_ctx->bit_rate = get_le32(&p);
 		p += 4; /* min bitrate */
 
-		blocksize = GST_READ_UINT8(p);
+		blocksize = get_byte(&p);
 		bs0 = blocksize & 15;
 		bs1 = blocksize >> 4;
 
@@ -97,7 +109,7 @@ vorbis_header(GstAVDec *self,
 		if (bs0 < 6 || bs1 > 13)
 			return -1;
 
-		if (GST_READ_UINT8(p) != 1)
+		if (get_byte(&p) != 1)
 			return -1;
 	}
 	else if (pkt_type == 3) {
