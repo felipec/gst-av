@@ -310,6 +310,11 @@ sink_setcaps(GstPad *pad,
 		memcpy(self->av_ctx->extradata, buf->data, buf->size);
 		self->av_ctx->extradata_size = buf->size;
 	}
+	else if (strcmp(name, "audio/mpeg") == 0) {
+		codec_id = CODEC_ID_MP3;
+		gst_structure_get_int(in_struc, "rate", &self->av_ctx->sample_rate);
+		gst_structure_get_int(in_struc, "channels", &self->av_ctx->channels);
+	}
 	else
 		codec_id = CODEC_ID_NONE;
 
@@ -352,6 +357,14 @@ generate_sink_template(void)
 
 	struc = gst_structure_new("audio/x-flac",
 			"framed", G_TYPE_BOOLEAN, TRUE,
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("audio/mpeg",
+			"mpegversion", G_TYPE_INT, 1,
+			"layer", G_TYPE_INT, 3,
+			"parsed", G_TYPE_BOOLEAN, TRUE,
 			NULL);
 
 	gst_caps_append_structure(caps, struc);
