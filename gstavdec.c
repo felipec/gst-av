@@ -289,6 +289,27 @@ sink_setcaps(GstPad *pad,
 		codec_id = CODEC_ID_VORBIS;
 		self->header_func = vorbis_header;
 	}
+	else if (strcmp(name, "audio/x-flac") == 0) {
+		const GValue *stream_header;
+		const GValue *stream_info;
+		GstBuffer *buf;
+
+		codec_id = CODEC_ID_FLAC;
+
+		stream_header = gst_structure_get_value(in_struc, "streamheader");
+		if (!stream_header)
+			return FALSE;
+
+		stream_info = gst_value_array_get_value(stream_header, 0);
+
+		buf = gst_value_get_buffer(stream_info);
+		buf->data += 17;
+		buf->size -= 17;
+
+		self->av_ctx->extradata = malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
+		memcpy(self->av_ctx->extradata, buf->data, buf->size);
+		self->av_ctx->extradata_size = buf->size;
+	}
 	else
 		codec_id = CODEC_ID_NONE;
 
@@ -319,10 +340,21 @@ generate_src_template(void)
 static GstCaps *
 generate_sink_template(void)
 {
-	GstCaps *caps = NULL;
+	GstCaps *caps;
+	GstStructure *struc;
 
-	caps = gst_caps_new_simple("audio/x-vorbis",
+	caps = gst_caps_new_empty();
+
+	struc = gst_structure_new("audio/x-vorbis",
 			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("audio/x-flac",
+			"framed", G_TYPE_BOOLEAN, TRUE,
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
 
 	return caps;
 }
