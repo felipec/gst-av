@@ -6,7 +6,7 @@
  *
  * This file may be used under the terms of the GNU Lesser General Public
  * License version 2.1.
-*/
+ */
 
 #include "gstavdec.h"
 #include "plugin.h"
@@ -24,9 +24,9 @@ static GstElementClass *parent_class;
 
 static unsigned int
 fixup_vorbis_headers(struct oggvorbis_private *priv,
-		     uint8_t **buf)
+		uint8_t **buf)
 {
-	int i,offset, len;
+	int i, offset, len;
 	unsigned char *ptr;
 
 	len = priv->len[0] + priv->len[1] + priv->len[2];
@@ -54,7 +54,7 @@ handle_comment(GstAVDec *self, GstBuffer *buf)
 
 static int
 vorbis_header(GstAVDec *self,
-	      GstBuffer *buf)
+		GstBuffer *buf)
 {
 	const uint8_t *p = GST_BUFFER_DATA(buf);
 	struct oggvorbis_private *priv = &self->priv;
@@ -113,7 +113,7 @@ vorbis_header(GstAVDec *self,
 
 static inline void
 calculate_timestamp(GstAVDec *self,
-		    GstBuffer *out_buf)
+		GstBuffer *out_buf)
 {
 	gint64 samples;
 
@@ -123,15 +123,15 @@ calculate_timestamp(GstAVDec *self,
 	GST_BUFFER_OFFSET_END(out_buf) = self->granulepos;
 
 	GST_BUFFER_TIMESTAMP(out_buf) = gst_util_uint64_scale_int(self->granulepos - samples,
-								  GST_SECOND, self->av_ctx->sample_rate);
+			GST_SECOND, self->av_ctx->sample_rate);
 	GST_BUFFER_DURATION(out_buf) = gst_util_uint64_scale_int(samples,
-								 GST_SECOND, self->av_ctx->sample_rate);
+			GST_SECOND, self->av_ctx->sample_rate);
 	self->granulepos += samples;
 }
 
 static GstFlowReturn
 pad_chain(GstPad *pad,
-	  GstBuffer *buf)
+		GstBuffer *buf)
 {
 	GstAVDec *self;
 	GstFlowReturn ret = GST_FLOW_OK;
@@ -152,13 +152,13 @@ pad_chain(GstPad *pad,
 				GstCaps *new_caps;
 
 				new_caps = gst_caps_new_simple("audio/x-raw-int",
-							       "rate", G_TYPE_INT, self->av_ctx->sample_rate,
-							       "signed", G_TYPE_BOOLEAN, TRUE,
-							       "channels", G_TYPE_INT, self->av_ctx->channels,
-							       "endianness", G_TYPE_INT, G_BYTE_ORDER,
-							       "width", G_TYPE_INT, 16,
-							       "depth", G_TYPE_INT, 16,
-							       NULL);
+						"rate", G_TYPE_INT, self->av_ctx->sample_rate,
+						"signed", G_TYPE_BOOLEAN, TRUE,
+						"channels", G_TYPE_INT, self->av_ctx->channels,
+						"endianness", G_TYPE_INT, G_BYTE_ORDER,
+						"width", G_TYPE_INT, 16,
+						"depth", G_TYPE_INT, 16,
+						NULL);
 
 				GST_INFO_OBJECT(self, "caps are: %" GST_PTR_FORMAT, new_caps);
 				gst_pad_set_caps(self->srcpad, new_caps);
@@ -180,8 +180,8 @@ pad_chain(GstPad *pad,
 		self->ring.in += buffer_size;
 		if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE - 0x2000) {
 			memcpy(self->pkt.data,
-			       self->pkt.data + self->ring.out,
-			       self->ring.in - self->ring.out);
+					self->pkt.data + self->ring.out,
+					self->ring.in - self->ring.out);
 			self->ring.in -= self->ring.out;
 			self->ring.out = 0;
 		}
@@ -211,7 +211,7 @@ leave:
 
 static gboolean
 pad_query(GstPad *pad,
-	  GstQuery *query)
+		GstQuery *query)
 {
 	GstAVDec *self;
 	gboolean res = FALSE;
@@ -219,23 +219,22 @@ pad_query(GstPad *pad,
 	self = GST_AVDEC(GST_PAD_PARENT(pad));
 
 	switch (GST_QUERY_TYPE(query)) {
-		case GST_QUERY_CONVERT:
-			{
-				GstFormat src_fmt, dest_fmt;
-				gint64 src_val, dest_val;
+	case GST_QUERY_CONVERT: {
+		GstFormat src_fmt, dest_fmt;
+		gint64 src_val, dest_val;
 
-				gst_query_parse_convert(query, &src_fmt, &src_val, &dest_fmt, &dest_val);
-				if (src_fmt != GST_FORMAT_DEFAULT || dest_fmt != GST_FORMAT_TIME)
-					break;
-
-				dest_val = gst_util_uint64_scale_int(src_val, GST_SECOND, self->av_ctx->sample_rate);
-
-				gst_query_set_convert(query, src_fmt, src_val, dest_fmt, dest_val);
-				return TRUE;
-			}
-		default:
-			res = gst_pad_query_default(pad, query);
+		gst_query_parse_convert(query, &src_fmt, &src_val, &dest_fmt, &dest_val);
+		if (src_fmt != GST_FORMAT_DEFAULT || dest_fmt != GST_FORMAT_TIME)
 			break;
+
+		dest_val = gst_util_uint64_scale_int(src_val, GST_SECOND, self->av_ctx->sample_rate);
+
+		gst_query_set_convert(query, src_fmt, src_val, dest_fmt, dest_val);
+		return TRUE;
+	}
+	default:
+		res = gst_pad_query_default(pad, query);
+		break;
 	}
 
 	return res;
@@ -243,7 +242,7 @@ pad_query(GstPad *pad,
 
 static GstStateChangeReturn
 change_state(GstElement *element,
-	     GstStateChange transition)
+		GstStateChange transition)
 {
 	GstStateChangeReturn ret;
 	GstAVDec *self;
@@ -251,18 +250,18 @@ change_state(GstElement *element,
 	self = GST_AVDEC(element);
 
 	switch (transition) {
-		case GST_STATE_CHANGE_NULL_TO_READY:
-			self->codec = avcodec_find_decoder(CODEC_ID_VORBIS);
-			if (!self->codec)
-				return GST_STATE_CHANGE_FAILURE;
-			self->av_ctx = avcodec_alloc_context();
-			self->header = -1;
-			self->seq = 0;
-			av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
-			break;
+	case GST_STATE_CHANGE_NULL_TO_READY:
+		self->codec = avcodec_find_decoder(CODEC_ID_VORBIS);
+		if (!self->codec)
+			return GST_STATE_CHANGE_FAILURE;
+		self->av_ctx = avcodec_alloc_context();
+		self->header = -1;
+		self->seq = 0;
+		av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
+		break;
 
-		default:
-			break;
+	default:
+		break;
 	}
 
 	ret = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
@@ -271,17 +270,17 @@ change_state(GstElement *element,
 		return ret;
 
 	switch (transition) {
-		case GST_STATE_CHANGE_READY_TO_NULL:
-			av_free_packet(&self->pkt);
-			/** @todo how exactly do we do this? */
+	case GST_STATE_CHANGE_READY_TO_NULL:
+		av_free_packet(&self->pkt);
+		/** @todo how exactly do we do this? */
 #if 0
-			if (self->av_ctx)
-				avcodec_close(self->av_ctx);
+		if (self->av_ctx)
+			avcodec_close(self->av_ctx);
 #endif
-			break;
+		break;
 
-		default:
-			break;
+	default:
+		break;
 	}
 
 	return ret;
@@ -293,13 +292,13 @@ generate_src_template(void)
 	GstCaps *caps = NULL;
 
 	caps = gst_caps_new_simple("audio/x-raw-int",
-				   "rate", GST_TYPE_INT_RANGE, 8000, 96000,
-				   "signed", G_TYPE_BOOLEAN, TRUE,
-				   "endianness", G_TYPE_INT, G_BYTE_ORDER,
-				   "width", G_TYPE_INT, 16,
-				   "depth", G_TYPE_INT, 16,
-				   "channels", GST_TYPE_INT_RANGE, 1, 256,
-				   NULL);
+			"rate", GST_TYPE_INT_RANGE, 8000, 96000,
+			"signed", G_TYPE_BOOLEAN, TRUE,
+			"endianness", G_TYPE_INT, G_BYTE_ORDER,
+			"width", G_TYPE_INT, 16,
+			"depth", G_TYPE_INT, 16,
+			"channels", GST_TYPE_INT_RANGE, 1, 256,
+			NULL);
 
 	return caps;
 }
@@ -310,14 +309,14 @@ generate_sink_template(void)
 	GstCaps *caps = NULL;
 
 	caps = gst_caps_new_simple("audio/x-vorbis",
-				   NULL);
+			NULL);
 
 	return caps;
 }
 
 static void
 instance_init(GTypeInstance *instance,
-	      gpointer g_class)
+		gpointer g_class)
 {
 	GstAVDec *self;
 	GstElementClass *element_class;
@@ -357,25 +356,25 @@ base_init(gpointer g_class)
 	gst_element_class_set_details(element_class, &details);
 
 	template = gst_pad_template_new("src", GST_PAD_SRC,
-					GST_PAD_ALWAYS,
-					generate_src_template());
+			GST_PAD_ALWAYS,
+			generate_src_template());
 
 	gst_element_class_add_pad_template(element_class, template);
 
 	template = gst_pad_template_new("sink", GST_PAD_SINK,
-					GST_PAD_ALWAYS,
-					generate_sink_template());
+			GST_PAD_ALWAYS,
+			generate_sink_template());
 
 	gst_element_class_add_pad_template(element_class, template);
 }
 
 static void
 class_init(gpointer g_class,
-	   gpointer class_data)
+		gpointer class_data)
 {
 	GstElementClass *gstelement_class;
 
-	gstelement_class = GST_ELEMENT_CLASS (g_class);
+	gstelement_class = GST_ELEMENT_CLASS(g_class);
 
 	parent_class = g_type_class_ref(GST_TYPE_ELEMENT);
 
