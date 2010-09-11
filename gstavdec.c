@@ -57,14 +57,6 @@ fixup_vorbis_headers(struct oggvorbis_private *priv,
 	return offset;
 }
 
-static void
-handle_comment(GstAVDec *self, GstBuffer *buf)
-{
-	GstTagList *list;
-	list = gst_tag_list_from_vorbiscomment_buffer(buf, (guint8 *) "\003vorbis", 7, NULL);
-	gst_element_found_tags_for_pad((GstElement *)self, self->srcpad, list);
-}
-
 static int
 vorbis_header(GstAVDec *self,
 		GstBuffer *buf)
@@ -114,7 +106,6 @@ vorbis_header(GstAVDec *self,
 	}
 	else if (pkt_type == 3) {
 		/* comment */
-		handle_comment(self, buf);
 	}
 	else {
 		/* extradata */
