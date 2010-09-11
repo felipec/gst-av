@@ -41,6 +41,7 @@ struct GstAVDec {
 	gint64 granulepos;
 	AVPacket pkt;
 	struct ring ring;
+	int (*header_func)(GstAVDec *self, GstBuffer *buf);
 };
 
 struct GstAVDecClass {

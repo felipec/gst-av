@@ -34,6 +34,13 @@ static inline uint32_t get_le32(const uint8_t **b)
 	return ((const struct unaligned_32 *)(*b - sizeof(uint32_t)))->l;
 }
 
+static int
+default_header(GstAVDec *self,
+		GstBuffer *buf)
+{
+	return 0;
+}
+
 static unsigned int
 fixup_vorbis_headers(struct oggvorbis_private *priv,
 		uint8_t **buf)
@@ -144,7 +151,7 @@ pad_chain(GstPad *pad,
 	self = (GstAVDec *)((GstObject *)pad)->parent;
 
 	if (!self->got_header) {
-		int hdr = vorbis_header(self, buf);
+		int hdr = self->header_func(self, buf);
 		if (!hdr) {
 			self->got_header = true;
 			if (avcodec_open(self->av_ctx, self->codec) < 0) {
@@ -224,9 +231,6 @@ change_state(GstElement *element,
 
 	switch (transition) {
 	case GST_STATE_CHANGE_NULL_TO_READY:
-		self->codec = avcodec_find_decoder(CODEC_ID_VORBIS);
-		if (!self->codec)
-			return GST_STATE_CHANGE_FAILURE;
 		self->av_ctx = avcodec_alloc_context();
 		self->got_header = false;
 		av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
@@ -256,6 +260,34 @@ change_state(GstElement *element,
 	}
 
 	return ret;
+}
+
+static gboolean
+sink_setcaps(GstPad *pad,
+		GstCaps *caps)
+{
+	GstAVDec *self;
+	GstStructure *in_struc;
+	const char *name;
+	int codec_id;
+
+	self = (GstAVDec *)((GstObject *)pad)->parent;
+
+	in_struc = gst_caps_get_structure(caps, 0);
+
+	name = gst_structure_get_name(in_struc);
+	if (strcmp(name, "audio/x-vorbis") == 0) {
+		codec_id = CODEC_ID_VORBIS;
+		self->header_func = vorbis_header;
+	}
+	else
+		codec_id = CODEC_ID_NONE;
+
+	self->codec = avcodec_find_decoder(codec_id);
+	if (!self->codec)
+		return false;
+
+	return true;
 }
 
 static GstCaps *
@@ -305,6 +337,10 @@ instance_init(GTypeInstance *instance,
 
 	gst_element_add_pad((GstElement *)self, self->sinkpad);
 	gst_element_add_pad((GstElement *)self, self->srcpad);
+
+	gst_pad_set_setcaps_function(self->sinkpad, sink_setcaps);
+
+	self->header_func = default_header;
 }
 
 static void
