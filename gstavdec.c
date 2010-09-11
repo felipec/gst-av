@@ -195,7 +195,7 @@ pad_chain(GstPad *pad,
 			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
 			self->ring.in += buffer_size;
-			if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE - 0x2000) {
+			if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE) {
 				memcpy(self->pkt.data,
 						self->pkt.data + self->ring.out,
 						self->ring.in - self->ring.out);
@@ -242,7 +242,7 @@ change_state(GstElement *element,
 	case GST_STATE_CHANGE_NULL_TO_READY:
 		self->av_ctx = avcodec_alloc_context();
 		self->got_header = false;
-		av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
+		av_new_packet(&self->pkt, 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE);
 		break;
 
 	default:
