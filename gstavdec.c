@@ -180,38 +180,47 @@ pad_chain(GstPad *pad,
 
 	if (self->got_header) {
 		AVPacket pkt;
-		void *buffer_data = self->pkt.data + self->ring.in;
-		int buffer_size = self->pkt.size;
 
 		av_init_packet(&pkt);
 		pkt.data = buf->data;
 		pkt.size = buf->size;
-		avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
-		self->ring.in += buffer_size;
-		if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE - 0x2000) {
-			memcpy(self->pkt.data,
-					self->pkt.data + self->ring.out,
-					self->ring.in - self->ring.out);
-			self->ring.in -= self->ring.out;
-			self->ring.out = 0;
-		}
+		do {
+			void *buffer_data;
+			int buffer_size;
+			int read;
 
-		if (buf->offset_end != GST_BUFFER_OFFSET_NONE)
-			self->granulepos = buf->offset_end;
+			buffer_data = self->pkt.data + self->ring.in;
+			buffer_size = self->pkt.size;
+			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
-		if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
-			GstBuffer *out_buf;
-			out_buf = gst_buffer_new();
-			out_buf->data = self->pkt.data + self->ring.out;
-			out_buf->size = BUFFER_SIZE;
-			calculate_timestamp(self, out_buf);
-			gst_buffer_set_caps(out_buf, self->srcpad->caps);
+			self->ring.in += buffer_size;
+			if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE - 0x2000) {
+				memcpy(self->pkt.data,
+						self->pkt.data + self->ring.out,
+						self->ring.in - self->ring.out);
+				self->ring.in -= self->ring.out;
+				self->ring.out = 0;
+			}
 
-			self->ring.out += out_buf->size;
+			if (buf->offset_end != GST_BUFFER_OFFSET_NONE)
+				self->granulepos = buf->offset_end;
 
-			ret = gst_pad_push(self->srcpad, out_buf);
-		}
+			if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
+				GstBuffer *out_buf;
+				out_buf = gst_buffer_new();
+				out_buf->data = self->pkt.data + self->ring.out;
+				out_buf->size = BUFFER_SIZE;
+				calculate_timestamp(self, out_buf);
+				gst_buffer_set_caps(out_buf, self->srcpad->caps);
+
+				self->ring.out += out_buf->size;
+
+				ret = gst_pad_push(self->srcpad, out_buf);
+			}
+			pkt.size -= read;
+			pkt.data += read;
+		} while (pkt.size > 0);
 	}
 
 leave:
