@@ -183,14 +183,14 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			int buffer_size;
 			int read;
 
-			buffer_data = self->pkt.data + self->ring.in;
-			buffer_size = self->pkt.size;
+			buffer_data = self->buffer_data + self->ring.in;
+			buffer_size = self->buffer_size;
 			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
 			self->ring.in += buffer_size;
 			if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE) {
-				memcpy(self->pkt.data,
-						self->pkt.data + self->ring.out,
+				memcpy(self->buffer_data,
+						self->buffer_data + self->ring.out,
 						self->ring.in - self->ring.out);
 				self->ring.in -= self->ring.out;
 				self->ring.out = 0;
@@ -199,7 +199,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
 				GstBuffer *out_buf;
 				out_buf = gst_buffer_new();
-				out_buf->data = self->pkt.data + self->ring.out;
+				out_buf->data = self->buffer_data + self->ring.out;
 				out_buf->size = BUFFER_SIZE;
 				calculate_timestamp(self, out_buf);
 				gst_buffer_set_caps(out_buf, self->srcpad->caps);
@@ -231,7 +231,8 @@ change_state(GstElement *element, GstStateChange transition)
 	case GST_STATE_CHANGE_NULL_TO_READY:
 		self->av_ctx = avcodec_alloc_context();
 		self->got_header = false;
-		av_new_packet(&self->pkt, 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE);
+		self->buffer_size = 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE;
+		self->buffer_data = av_malloc(self->buffer_size);
 		break;
 
 	default:
@@ -247,7 +248,7 @@ change_state(GstElement *element, GstStateChange transition)
 	case GST_STATE_CHANGE_READY_TO_NULL:
 		if (self->av_ctx)
 			avcodec_close(self->av_ctx);
-		av_free_packet(&self->pkt);
+		av_freep(&self->buffer_data);
 		break;
 
 	default:

@@ -8,8 +8,8 @@ override CFLAGS += -D_GNU_SOURCE
 GST_CFLAGS := $(shell pkg-config --cflags gstreamer-0.10 gstreamer-tag-0.10)
 GST_LIBS := $(shell pkg-config --libs gstreamer-0.10 gstreamer-tag-0.10)
 
-AVCODEC_CFLAGS := $(shell pkg-config --cflags libavcodec)
-AVCODEC_LIBS := $(shell pkg-config --libs libavcodec)
+AVCODEC_CFLAGS := $(shell pkg-config --cflags libavcodec libavutil)
+AVCODEC_LIBS := $(shell pkg-config --libs libavcodec libavutil)
 
 all:
 

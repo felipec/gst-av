@@ -39,7 +39,8 @@ struct GstAVDec {
 	bool got_header;
 	struct oggvorbis_private priv;
 	uint64_t timestamp;
-	AVPacket pkt;
+	uint8_t *buffer_data;
+	size_t buffer_size;
 	struct ring ring;
 	int (*header_func)(GstAVDec *self, GstBuffer *buf);
 };
