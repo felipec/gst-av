@@ -141,7 +141,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 	self = (GstAVDec *)((GstObject *)pad)->parent;
 
-	if (!self->got_header) {
+	if (G_UNLIKELY(!self->got_header)) {
 		int hdr = self->header_func(self, buf);
 		if (!hdr) {
 			self->got_header = true;
@@ -168,7 +168,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		}
 	}
 
-	if (self->got_header) {
+	if (G_LIKELY(self->got_header)) {
 		AVPacket pkt;
 
 		av_init_packet(&pkt);
