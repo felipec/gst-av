@@ -35,15 +35,13 @@ static inline uint32_t get_le32(const uint8_t **b)
 }
 
 static int
-default_header(GstAVDec *self,
-		GstBuffer *buf)
+default_header(GstAVDec *self, GstBuffer *buf)
 {
 	return 0;
 }
 
 static unsigned int
-fixup_vorbis_headers(struct oggvorbis_private *priv,
-		uint8_t **buf)
+fixup_vorbis_headers(struct oggvorbis_private *priv, uint8_t **buf)
 {
 	int i, offset, len;
 	unsigned char *ptr;
@@ -65,8 +63,7 @@ fixup_vorbis_headers(struct oggvorbis_private *priv,
 }
 
 static int
-vorbis_header(GstAVDec *self,
-		GstBuffer *buf)
+vorbis_header(GstAVDec *self, GstBuffer *buf)
 {
 	const uint8_t *p = buf->data;
 	struct oggvorbis_private *priv = &self->priv;
@@ -124,8 +121,7 @@ vorbis_header(GstAVDec *self,
 }
 
 static inline void
-calculate_timestamp(GstAVDec *self,
-		GstBuffer *out_buf)
+calculate_timestamp(GstAVDec *self, GstBuffer *out_buf)
 {
 	gint64 samples;
 
@@ -142,8 +138,7 @@ calculate_timestamp(GstAVDec *self,
 }
 
 static GstFlowReturn
-pad_chain(GstPad *pad,
-		GstBuffer *buf)
+pad_chain(GstPad *pad, GstBuffer *buf)
 {
 	GstAVDec *self;
 	GstFlowReturn ret = GST_FLOW_OK;
@@ -230,8 +225,7 @@ leave:
 }
 
 static GstStateChangeReturn
-change_state(GstElement *element,
-		GstStateChange transition)
+change_state(GstElement *element, GstStateChange transition)
 {
 	GstStateChangeReturn ret;
 	GstAVDec *self;
@@ -272,8 +266,7 @@ change_state(GstElement *element,
 }
 
 static gboolean
-sink_setcaps(GstPad *pad,
-		GstCaps *caps)
+sink_setcaps(GstPad *pad, GstCaps *caps)
 {
 	GstAVDec *self;
 	GstStructure *in_struc;
@@ -298,7 +291,7 @@ sink_setcaps(GstPad *pad,
 
 		stream_header = gst_structure_get_value(in_struc, "streamheader");
 		if (!stream_header)
-			return FALSE;
+			return false;
 
 		stream_info = gst_value_array_get_value(stream_header, 0);
 
@@ -373,8 +366,7 @@ generate_sink_template(void)
 }
 
 static void
-instance_init(GTypeInstance *instance,
-		gpointer g_class)
+instance_init(GTypeInstance *instance, void *g_class)
 {
 	GstAVDec *self = (GstAVDec *)instance;
 	GstElementClass *element_class = g_class;
@@ -398,7 +390,7 @@ instance_init(GTypeInstance *instance,
 }
 
 static void
-base_init(gpointer g_class)
+base_init(void *g_class)
 {
 	GstElementClass *element_class = g_class;
 	GstPadTemplate *template;
@@ -425,8 +417,7 @@ base_init(gpointer g_class)
 }
 
 static void
-class_init(gpointer g_class,
-		gpointer class_data)
+class_init(void *g_class, void *class_data)
 {
 	GstElementClass *gstelement_class = g_class;
 

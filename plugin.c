@@ -21,9 +21,9 @@ plugin_init(GstPlugin *plugin)
 #endif
 
 	if (!gst_element_register(plugin, "avdec", GST_RANK_PRIMARY + 1, GST_AVDEC_TYPE))
-		return FALSE;
+		return false;
 
-	return TRUE;
+	return true;
 }
 
 GstPluginDesc gst_plugin_desc = {
