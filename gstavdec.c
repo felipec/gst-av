@@ -164,6 +164,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 				GST_INFO_OBJECT(self, "caps are: %" GST_PTR_FORMAT, new_caps);
 				gst_pad_set_caps(self->srcpad, new_caps);
+				gst_caps_unref(new_caps);
 			}
 		}
 	}
@@ -250,8 +251,10 @@ change_state(GstElement *element, GstStateChange transition)
 
 	switch (transition) {
 	case GST_STATE_CHANGE_READY_TO_NULL:
-		if (self->av_ctx)
+		if (self->av_ctx) {
 			avcodec_close(self->av_ctx);
+			av_freep(&self->av_ctx);
+		}
 		av_free_packet(&self->pkt);
 		av_freep(&self->buffer_data);
 		break;
