@@ -184,7 +184,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			int read;
 
 			buffer_data = self->buffer_data + self->ring.in;
-			buffer_size = self->buffer_size;
+			buffer_size = self->buffer_size - self->ring.in;
 			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
 			self->ring.in += buffer_size;
