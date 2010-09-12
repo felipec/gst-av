@@ -193,7 +193,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 			self->ring.in += buffer_size;
 			if (self->ring.in >= 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE) {
-				memcpy(self->buffer_data,
+				memmove(self->buffer_data,
 						self->buffer_data + self->ring.out,
 						self->ring.in - self->ring.out);
 				self->ring.in -= self->ring.out;
