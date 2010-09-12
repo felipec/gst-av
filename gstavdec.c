@@ -172,8 +172,11 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		AVPacket pkt;
 
 		av_init_packet(&pkt);
-		pkt.data = buf->data;
+		pkt.data = self->pkt.data;
 		pkt.size = buf->size;
+
+		memcpy(pkt.data, buf->data, buf->size);
+		memset(pkt.data + pkt.size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 
 		if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE))
 			self->timestamp = buf->timestamp;
@@ -231,6 +234,7 @@ change_state(GstElement *element, GstStateChange transition)
 	case GST_STATE_CHANGE_NULL_TO_READY:
 		self->av_ctx = avcodec_alloc_context();
 		self->got_header = false;
+		av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
 		self->buffer_size = 3 * AVCODEC_MAX_AUDIO_FRAME_SIZE;
 		self->buffer_data = av_malloc(self->buffer_size);
 		break;
@@ -248,6 +252,7 @@ change_state(GstElement *element, GstStateChange transition)
 	case GST_STATE_CHANGE_READY_TO_NULL:
 		if (self->av_ctx)
 			avcodec_close(self->av_ctx);
+		av_free_packet(&self->pkt);
 		av_freep(&self->buffer_data);
 		break;
 
