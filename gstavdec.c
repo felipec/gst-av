@@ -20,7 +20,7 @@
 
 static GstElementClass *parent_class;
 
-#define BUFFER_SIZE 0x20000
+#define BUFFER_SIZE AVCODEC_MAX_AUDIO_FRAME_SIZE
 
 static inline uint8_t get_byte(const uint8_t **b)
 {
@@ -188,7 +188,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 
 			self->ring.in += buffer_size;
-			if (self->ring.in >= AVCODEC_MAX_AUDIO_FRAME_SIZE) {
+			if (self->ring.in >= 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE) {
 				memcpy(self->buffer_data,
 						self->buffer_data + self->ring.out,
 						self->ring.in - self->ring.out);
@@ -231,7 +231,7 @@ change_state(GstElement *element, GstStateChange transition)
 	case GST_STATE_CHANGE_NULL_TO_READY:
 		self->av_ctx = avcodec_alloc_context();
 		self->got_header = false;
-		self->buffer_size = 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE;
+		self->buffer_size = 3 * AVCODEC_MAX_AUDIO_FRAME_SIZE;
 		self->buffer_data = av_malloc(self->buffer_size);
 		break;
 
