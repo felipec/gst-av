@@ -150,7 +150,6 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		if (!hdr) {
 			self->got_header = true;
 			if (avcodec_open(self->av_ctx, self->codec) < 0) {
-				g_error("fail open");
 				ret = GST_FLOW_ERROR;
 				goto leave;
 			}
@@ -250,12 +249,9 @@ change_state(GstElement *element, GstStateChange transition)
 
 	switch (transition) {
 	case GST_STATE_CHANGE_READY_TO_NULL:
-		av_free_packet(&self->pkt);
-		/** @todo how exactly do we do this? */
-#if 0
 		if (self->av_ctx)
 			avcodec_close(self->av_ctx);
-#endif
+		av_free_packet(&self->pkt);
 		break;
 
 	default:

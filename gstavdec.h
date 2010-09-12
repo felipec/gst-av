@@ -28,7 +28,7 @@ struct oggvorbis_private {
 };
 
 struct ring {
-	int in, out;
+	size_t in, out;
 };
 
 struct GstAVDec {
