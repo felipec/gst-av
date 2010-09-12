@@ -123,18 +123,14 @@ vorbis_header(GstAVDec *self, GstBuffer *buf)
 static inline void
 calculate_timestamp(GstAVDec *self, GstBuffer *out_buf)
 {
-	gint64 samples;
+	uint32_t samples;
 
 	samples = out_buf->size / (self->av_ctx->channels * sizeof(int16_t));
 
-	out_buf->offset = self->granulepos - samples;
-	out_buf->offset_end = self->granulepos;
+	out_buf->timestamp = self->timestamp;
+	out_buf->duration = gst_util_uint64_scale_int(samples, GST_SECOND, self->av_ctx->sample_rate);
 
-	out_buf->timestamp = gst_util_uint64_scale_int(self->granulepos - samples,
-			GST_SECOND, self->av_ctx->sample_rate);
-	out_buf->duration = gst_util_uint64_scale_int(samples,
-			GST_SECOND, self->av_ctx->sample_rate);
-	self->granulepos += samples;
+	self->timestamp += out_buf->duration;
 }
 
 static GstFlowReturn
@@ -179,6 +175,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		pkt.data = buf->data;
 		pkt.size = buf->size;
 
+		if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE))
+			self->timestamp = buf->timestamp;
+
 		do {
 			void *buffer_data;
 			int buffer_size;
@@ -196,9 +195,6 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 				self->ring.in -= self->ring.out;
 				self->ring.out = 0;
 			}
-
-			if (buf->offset_end != GST_BUFFER_OFFSET_NONE)
-				self->granulepos = buf->offset_end;
 
 			if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
 				GstBuffer *out_buf;
@@ -383,6 +379,7 @@ instance_init(GTypeInstance *instance, void *g_class)
 	gst_pad_set_setcaps_function(self->sinkpad, sink_setcaps);
 
 	self->header_func = default_header;
+	self->timestamp = GST_CLOCK_TIME_NONE;
 }
 
 static void

@@ -38,7 +38,7 @@ struct GstAVDec {
 	AVCodecContext *av_ctx;
 	bool got_header;
 	struct oggvorbis_private priv;
-	gint64 granulepos;
+	uint64_t timestamp;
 	AVPacket pkt;
 	struct ring ring;
 	int (*header_func)(GstAVDec *self, GstBuffer *buf);
