@@ -13,7 +13,7 @@ AVCODEC_LIBS := $(shell pkg-config --libs libavcodec libavutil)
 
 all:
 
-version := $(shell ./get-version.sh)
+version := $(shell ./get-version)
 
 # plugin
 
