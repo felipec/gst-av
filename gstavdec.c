@@ -190,6 +190,10 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			buffer_data = self->buffer_data + self->ring.in;
 			buffer_size = self->buffer_size - self->ring.in;
 			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
+			if (read < 0) {
+				ret = GST_FLOW_ERROR;
+				break;
+			}
 
 			self->ring.in += buffer_size;
 			if (self->ring.in >= 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE) {
