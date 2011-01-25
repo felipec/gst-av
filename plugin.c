@@ -11,6 +11,8 @@
 
 #include "gstav_adec.h"
 #include "gstav_vdec.h"
+#include "gstav_h263enc.h"
+#include "gstav_h264enc.h"
 
 #include <stdbool.h>
 
@@ -27,6 +29,12 @@ plugin_init(GstPlugin *plugin)
 		return false;
 
 	if (!gst_element_register(plugin, "avvdec", GST_RANK_PRIMARY + 1, GST_AV_VDEC_TYPE))
+		return false;
+
+	if (!gst_element_register(plugin, "avh263enc", GST_RANK_PRIMARY + 1, GST_AV_H263ENC_TYPE))
+		return false;
+
+	if (!gst_element_register(plugin, "avh264enc", GST_RANK_PRIMARY + 1, GST_AV_H264ENC_TYPE))
 		return false;
 
 	return true;
