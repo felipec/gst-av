@@ -10,6 +10,7 @@
 #include "plugin.h"
 
 #include "gstav_adec.h"
+#include "gstav_vdec.h"
 
 #include <stdbool.h>
 
@@ -23,6 +24,9 @@ plugin_init(GstPlugin *plugin)
 #endif
 
 	if (!gst_element_register(plugin, "avadec", GST_RANK_PRIMARY + 1, GST_AV_ADEC_TYPE))
+		return false;
+
+	if (!gst_element_register(plugin, "avvdec", GST_RANK_PRIMARY + 1, GST_AV_VDEC_TYPE))
 		return false;
 
 	return true;

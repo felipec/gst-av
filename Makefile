@@ -19,7 +19,7 @@ version := $(shell ./get-version)
 
 gst_plugin := libgstav.so
 
-$(gst_plugin): plugin.o gstav_adec.o
+$(gst_plugin): plugin.o gstav_adec.o gstav_vdec.o
 $(gst_plugin): override CFLAGS += -fPIC $(GST_CFLAGS) $(AVCODEC_CFLAGS) -D VERSION='"$(version)"'
 $(gst_plugin): override LIBS += $(GST_LIBS) $(AVCODEC_LIBS)
 
