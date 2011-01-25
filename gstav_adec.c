@@ -8,7 +8,7 @@
  * License version 2.1.
  */
 
-#include "gstavdec.h"
+#include "gstav_adec.h"
 #include "plugin.h"
 
 #include <libavcodec/avcodec.h>
@@ -456,9 +456,9 @@ base_init(void *g_class)
 	GstPadTemplate *template;
 	GstElementDetails details;
 
-	details.longname = "avdec element";
+	details.longname = "av audio decoder";
 	details.klass = "Coder/Decoder/Audio";
-	details.description = "AVCodec stuff";
+	details.description = "Audio decoder wrapper for libavcodec";
 	details.author = "Felipe Contreras";
 
 	gst_element_class_set_details(element_class, &details);
@@ -489,7 +489,7 @@ class_init(void *g_class, void *class_data)
 }
 
 GType
-gst_avdec_get_type(void)
+gst_av_adec_get_type(void)
 {
 	static GType type;
 
@@ -502,7 +502,7 @@ gst_avdec_get_type(void)
 			.instance_init = instance_init,
 		};
 
-		type = g_type_register_static(GST_TYPE_ELEMENT, "GstAVDec", &type_info, 0);
+		type = g_type_register_static(GST_TYPE_ELEMENT, "GstAVAudioDec", &type_info, 0);
 	}
 
 	return type;

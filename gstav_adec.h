@@ -7,13 +7,13 @@
  * License version 2.1.
  */
 
-#ifndef GST_AVDEC_H
-#define GST_AVDEC_H
+#ifndef GST_AV_ADEC_H
+#define GST_AV_ADEC_H
 
 #include <glib-object.h>
 
-#define GST_AVDEC_TYPE (gst_avdec_get_type())
+#define GST_AV_ADEC_TYPE (gst_av_adec_get_type())
 
-GType gst_avdec_get_type(void);
+GType gst_av_adec_get_type(void);
 
-#endif /* GST_AVDEC_H */
+#endif /* GST_AV_ADEC_H */

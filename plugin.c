@@ -9,7 +9,7 @@
 
 #include "plugin.h"
 
-#include "gstavdec.h"
+#include "gstav_adec.h"
 
 #include <stdbool.h>
 
@@ -22,7 +22,7 @@ plugin_init(GstPlugin *plugin)
 	gstav_debug = _gst_debug_category_new("av", 0, "libav stuff");
 #endif
 
-	if (!gst_element_register(plugin, "avdec", GST_RANK_PRIMARY + 1, GST_AVDEC_TYPE))
+	if (!gst_element_register(plugin, "avadec", GST_RANK_PRIMARY + 1, GST_AV_ADEC_TYPE))
 		return false;
 
 	return true;
