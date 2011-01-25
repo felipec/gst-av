@@ -76,6 +76,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 	if (G_UNLIKELY(!self->initialized)) {
 		GstCaps *new_caps;
+		GstStructure *struc;
 
 		self->initialized = true;
 		if (avcodec_open(ctx, self->codec) < 0) {
@@ -83,12 +84,27 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			goto leave;
 		}
 
-		new_caps = gst_caps_new_simple("video/x-raw-yuv",
+		new_caps = gst_caps_new_empty();
+
+		struc = gst_structure_new("video/x-raw-yuv",
 				"width", G_TYPE_INT, ctx->width,
 				"height", G_TYPE_INT, ctx->height,
 				"format", GST_TYPE_FOURCC, GST_MAKE_FOURCC('I','4','2','0'),
-				"framerate", GST_TYPE_FRACTION, 0, 1,
 				NULL);
+
+		if (ctx->time_base.num)
+			gst_structure_set(struc,
+					"framerate", GST_TYPE_FRACTION,
+					ctx->time_base.den, ctx->time_base.num,
+					NULL);
+
+		if (ctx->sample_aspect_ratio.num)
+			gst_structure_set(struc,
+					"pixel-aspect-ratio", GST_TYPE_FRACTION,
+					ctx->sample_aspect_ratio.num, ctx->sample_aspect_ratio.den,
+					NULL);
+
+		gst_caps_append_structure(new_caps, struc);
 
 		GST_INFO_OBJECT(self, "caps are: %" GST_PTR_FORMAT, new_caps);
 		gst_pad_set_caps(self->srcpad, new_caps);
@@ -177,6 +193,16 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 
 	gst_structure_get_int(in_struc, "width", &ctx->width);
 	gst_structure_get_int(in_struc, "height", &ctx->height);
+
+	gst_structure_get_fraction(in_struc, "pixel-aspect-ratio",
+			&ctx->sample_aspect_ratio.num, &ctx->sample_aspect_ratio.den);
+
+	gst_structure_get_fraction(in_struc, "framerate",
+			&ctx->time_base.den, &ctx->time_base.num);
+
+	/* bug in xvimagesink? */
+	if (!ctx->time_base.num)
+		ctx->time_base = (AVRational){ 1, 0 };
 
 	codec_data = gst_structure_get_value(in_struc, "codec_data");
 	if (!codec_data)
