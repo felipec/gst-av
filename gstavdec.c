@@ -301,6 +301,29 @@ change_state(GstElement *element, GstStateChange transition)
 }
 
 static gboolean
+sink_event(GstPad *pad, GstEvent *event)
+{
+	struct obj *self;
+	gboolean ret = TRUE;
+
+	self = (struct obj *)(gst_pad_get_parent(pad));
+
+	switch (event->type) {
+	case GST_EVENT_FLUSH_START:
+		ret = gst_pad_push_event(self->srcpad, event);
+		self->timestamp = GST_CLOCK_TIME_NONE;
+		break;
+	default:
+		ret = gst_pad_push_event(self->srcpad, event);
+		break;
+	}
+
+	gst_object_unref(self);
+
+	return ret;
+}
+
+static gboolean
 sink_setcaps(GstPad *pad, GstCaps *caps)
 {
 	struct obj *self;
@@ -410,6 +433,7 @@ instance_init(GTypeInstance *instance, void *g_class)
 		gst_pad_new_from_template(gst_element_class_get_pad_template(element_class, "sink"), "sink");
 
 	gst_pad_set_chain_function(self->sinkpad, pad_chain);
+	gst_pad_set_event_function(self->sinkpad, sink_event);
 
 	self->srcpad =
 		gst_pad_new_from_template(gst_element_class_get_pad_template(element_class, "src"), "src");
