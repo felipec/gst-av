@@ -11,6 +11,8 @@
 
 #include "gstavdec.h"
 
+#include <stdbool.h>
+
 GstDebugCategory *gstav_debug;
 
 static gboolean

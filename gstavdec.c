@@ -11,16 +11,46 @@
 #include "gstavdec.h"
 #include "plugin.h"
 
+#include <libavcodec/avcodec.h>
 #include <gst/tag/tag.h>
 
 #include <stdlib.h>
 #include <string.h> /* for memcpy */
+#include <stdbool.h>
 
 #define GST_CAT_DEFAULT gstav_debug
 
 static GstElementClass *parent_class;
 
 #define BUFFER_SIZE AVCODEC_MAX_AUDIO_FRAME_SIZE
+
+struct oggvorbis_private {
+	unsigned int len[3];
+	unsigned char *packet[3];
+};
+
+struct ring {
+	size_t in, out;
+};
+
+struct obj {
+	GstElement element;
+	GstPad *sinkpad, *srcpad;
+	AVCodec *codec;
+	AVCodecContext *av_ctx;
+	bool got_header;
+	struct oggvorbis_private priv;
+	uint64_t timestamp;
+	AVPacket pkt;
+	uint8_t *buffer_data;
+	size_t buffer_size;
+	struct ring ring;
+	int (*header_func)(struct obj *self, GstBuffer *buf);
+};
+
+struct obj_class {
+	GstElementClass parent_class;
+};
 
 static inline uint8_t get_byte(const uint8_t **b)
 {
@@ -35,7 +65,7 @@ static inline uint32_t get_le32(const uint8_t **b)
 }
 
 static int
-default_header(GstAVDec *self, GstBuffer *buf)
+default_header(struct obj *self, GstBuffer *buf)
 {
 	return 0;
 }
@@ -63,7 +93,7 @@ fixup_vorbis_headers(struct oggvorbis_private *priv, uint8_t **buf)
 }
 
 static int
-vorbis_header(GstAVDec *self, GstBuffer *buf)
+vorbis_header(struct obj *self, GstBuffer *buf)
 {
 	const uint8_t *p = buf->data;
 	struct oggvorbis_private *priv = &self->priv;
@@ -121,7 +151,7 @@ vorbis_header(GstAVDec *self, GstBuffer *buf)
 }
 
 static inline void
-calculate_timestamp(GstAVDec *self, GstBuffer *out_buf)
+calculate_timestamp(struct obj *self, GstBuffer *out_buf)
 {
 	uint32_t samples;
 
@@ -136,10 +166,10 @@ calculate_timestamp(GstAVDec *self, GstBuffer *out_buf)
 static GstFlowReturn
 pad_chain(GstPad *pad, GstBuffer *buf)
 {
-	GstAVDec *self;
+	struct obj *self;
 	GstFlowReturn ret = GST_FLOW_OK;
 
-	self = (GstAVDec *)((GstObject *)pad)->parent;
+	self = (struct obj *)((GstObject *)pad)->parent;
 
 	if (G_UNLIKELY(!self->got_header)) {
 		int hdr = self->header_func(self, buf);
@@ -231,9 +261,9 @@ static GstStateChangeReturn
 change_state(GstElement *element, GstStateChange transition)
 {
 	GstStateChangeReturn ret;
-	GstAVDec *self;
+	struct obj *self;
 
-	self = (GstAVDec *)element;
+	self = (struct obj *)element;
 
 	switch (transition) {
 	case GST_STATE_CHANGE_NULL_TO_READY:
@@ -273,12 +303,12 @@ change_state(GstElement *element, GstStateChange transition)
 static gboolean
 sink_setcaps(GstPad *pad, GstCaps *caps)
 {
-	GstAVDec *self;
+	struct obj *self;
 	GstStructure *in_struc;
 	const char *name;
 	int codec_id;
 
-	self = (GstAVDec *)((GstObject *)pad)->parent;
+	self = (struct obj *)((GstObject *)pad)->parent;
 
 	in_struc = gst_caps_get_structure(caps, 0);
 
@@ -373,7 +403,7 @@ generate_sink_template(void)
 static void
 instance_init(GTypeInstance *instance, void *g_class)
 {
-	GstAVDec *self = (GstAVDec *)instance;
+	struct obj *self = (struct obj *)instance;
 	GstElementClass *element_class = g_class;
 
 	self->sinkpad =
@@ -441,10 +471,10 @@ gst_avdec_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		GTypeInfo type_info = {
-			.class_size = sizeof(GstAVDecClass),
+			.class_size = sizeof(struct obj_class),
 			.class_init = class_init,
 			.base_init = base_init,
-			.instance_size = sizeof(GstAVDec),
+			.instance_size = sizeof(struct obj),
 			.instance_init = instance_init,
 		};
 
