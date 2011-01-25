@@ -194,6 +194,71 @@ next:
 		codec_id = CODEC_ID_H263;
 	else if (strcmp(name, "video/x-h264") == 0)
 		codec_id = CODEC_ID_H264;
+	else if (strcmp(name, "video/mpeg") == 0) {
+		int version;
+		gst_structure_get_int(in_struc, "mpegversion", &version);
+		switch (version) {
+		case 4:
+			codec_id = CODEC_ID_MPEG4;
+			break;
+		case 2:
+			codec_id = CODEC_ID_MPEG2VIDEO;
+			break;
+		case 1:
+			codec_id = CODEC_ID_MPEG1VIDEO;
+			break;
+		default:
+			codec_id = CODEC_ID_NONE;
+			break;
+		}
+	}
+	else if (strcmp(name, "video/x-divx") == 0) {
+		int version;
+		gst_structure_get_int(in_struc, "divxversion", &version);
+		switch (version) {
+		case 5:
+		case 4:
+			codec_id = CODEC_ID_MPEG4;
+			break;
+		case 3:
+			codec_id = CODEC_ID_MSMPEG4V3;
+			break;
+		default:
+			codec_id = CODEC_ID_NONE;
+			break;
+		}
+	}
+	else if (strcmp(name, "video/x-xvid") == 0)
+		codec_id = CODEC_ID_XVID;
+	else if (strcmp(name, "video/x-3ivx") == 0)
+		codec_id = CODEC_ID_MPEG4;
+	else if (strcmp(name, "video/x-wmv") == 0) {
+		int version;
+		gst_structure_get_int(in_struc, "wmvversion", &version);
+		switch (version) {
+		case 3: {
+			guint32 fourcc;
+			codec_id = CODEC_ID_WMV3;
+			if (gst_structure_get_fourcc(in_struc, "fourcc", &fourcc) ||
+					gst_structure_get_fourcc(in_struc, "format", &fourcc))
+			{
+				if (fourcc == GST_MAKE_FOURCC('W', 'V', 'C', '1'))
+					codec_id = CODEC_ID_VC1;
+			}
+			break;
+		}
+		case 2:
+			codec_id = CODEC_ID_WMV2;
+			break;
+		case 1:
+			codec_id = CODEC_ID_WMV1;
+			break;
+		default:
+			codec_id = CODEC_ID_NONE;
+			break;
+		}
+
+	}
 	else
 		codec_id = CODEC_ID_NONE;
 
@@ -231,6 +296,31 @@ generate_sink_template(void)
 
 	struc = gst_structure_new("video/x-h264",
 			"alignment", G_TYPE_STRING, "au",
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("video/mpeg",
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("video/x-divx",
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("video/x-xvid",
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("video/x-3ivx",
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("video/x-wmv",
 			NULL);
 
 	gst_caps_append_structure(caps, struc);
