@@ -258,6 +258,8 @@ next:
 		codec_id = CODEC_ID_MPEG4;
 	else if (strcmp(name, "video/x-3ivx") == 0)
 		codec_id = CODEC_ID_MPEG4;
+	else if (strcmp(name, "video/x-vp8") == 0)
+		codec_id = CODEC_ID_VP8;
 	else if (strcmp(name, "video/x-wmv") == 0) {
 		int version;
 		gst_structure_get_int(in_struc, "wmvversion", &version);
@@ -347,6 +349,11 @@ generate_sink_template(void)
 	gst_caps_append_structure(caps, struc);
 
 	struc = gst_structure_new("video/x-wmv",
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("video/x-vp8",
 			NULL);
 
 	gst_caps_append_structure(caps, struc);
