@@ -20,6 +20,7 @@
 #include <stdbool.h>
 
 #include "gstav_parse.h"
+#include "get_bits.h"
 
 #define GST_CAT_DEFAULT gstav_debug
 
@@ -268,6 +269,39 @@ change_state(GstElement *element, GstStateChange transition)
 	return ret;
 }
 
+static void get_theora_extradata(AVCodecContext *ctx,
+		GstStructure *in_struc)
+{
+	const GValue *array;
+	const GValue *value;
+	GstBuffer *buf;
+	size_t size = 0;
+	uint8_t *p;
+
+	array = gst_structure_get_value(in_struc, "streamheader");
+	if (!array)
+		return;
+
+	/* get size */
+	for (unsigned i = 0; i < gst_value_array_get_size(array); i++) {
+		value = gst_value_array_get_value(array, i);
+		buf = gst_value_get_buffer(value);
+		size += buf->size + 2;
+	}
+
+	/* fill it up */
+	ctx->extradata = p = malloc(size + FF_INPUT_BUFFER_PADDING_SIZE);
+	for (unsigned i = 0; i < gst_value_array_get_size(array); i++) {
+		value = gst_value_array_get_value(array, i);
+		buf = gst_value_get_buffer(value);
+		AV_WB16(p, buf->size);
+		p += 2;
+		memcpy(p, buf->data, buf->size);
+		p += buf->size;
+	}
+	ctx->extradata_size = p - ctx->extradata;
+}
+
 static gboolean
 sink_setcaps(GstPad *pad, GstCaps *caps)
 {
@@ -329,6 +363,8 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 		codec_id = CODEC_ID_MPEG4;
 	else if (strcmp(name, "video/x-vp8") == 0)
 		codec_id = CODEC_ID_VP8;
+	else if (strcmp(name, "video/x-theora") == 0)
+		codec_id = CODEC_ID_THEORA;
 	else if (strcmp(name, "video/x-wmv") == 0) {
 		int version;
 		gst_structure_get_int(in_struc, "wmvversion", &version);
@@ -395,6 +431,11 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	/* bug in xvimagesink? */
 	if (!ctx->time_base.num)
 		ctx->time_base = (AVRational){ 1, 0 };
+
+	if (codec_id == CODEC_ID_THEORA) {
+		get_theora_extradata(ctx, in_struc);
+		goto next;
+	}
 
 	codec_data = gst_structure_get_value(in_struc, "codec_data");
 	if (!codec_data)
@@ -470,6 +511,11 @@ generate_sink_template(void)
 	gst_caps_append_structure(caps, struc);
 
 	struc = gst_structure_new("video/x-vp8",
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("video/x-theora",
 			NULL);
 
 	gst_caps_append_structure(caps, struc);
