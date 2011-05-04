@@ -255,7 +255,7 @@ next:
 		}
 	}
 	else if (strcmp(name, "video/x-xvid") == 0)
-		codec_id = CODEC_ID_XVID;
+		codec_id = CODEC_ID_MPEG4;
 	else if (strcmp(name, "video/x-3ivx") == 0)
 		codec_id = CODEC_ID_MPEG4;
 	else if (strcmp(name, "video/x-wmv") == 0) {
