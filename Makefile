@@ -1,9 +1,9 @@
 CC := $(CROSS_COMPILE)gcc
 
 CFLAGS := -O2 -ggdb -Wall -Wextra -Wno-unused-parameter -ansi -std=c99
-LDFLAGS := -Wl,--no-undefined -Wl-,--as-needed
+LDFLAGS := -Wl,--no-undefined -Wl,--as-needed
 
-override CFLAGS += -D_GNU_SOURCE
+override CFLAGS += -D_GNU_SOURCE -DGST_DISABLE_DEPRECATED
 
 GST_CFLAGS := $(shell pkg-config --cflags gstreamer-0.10 gstreamer-tag-0.10)
 GST_LIBS := $(shell pkg-config --libs gstreamer-0.10 gstreamer-tag-0.10)
@@ -14,6 +14,9 @@ AVCODEC_LIBS := $(shell pkg-config --libs libavcodec libavutil)
 all:
 
 version := $(shell ./get-version)
+prefix := /usr
+
+D = $(DESTDIR)
 
 # plugin
 
@@ -33,6 +36,9 @@ QUIET_CC    = @echo '   CC         '$@;
 QUIET_LINK  = @echo '   LINK       '$@;
 QUIET_CLEAN = @echo '   CLEAN      '$@;
 endif
+
+install: $(targets)
+	install -m 755 -D libgstav.so $(D)$(prefix)/lib/gstreamer-0.10/libgstav.so
 
 %.o:: %.c
 	$(QUIET_CC)$(CC) $(CFLAGS) -MMD -o $@ -c $<
