@@ -453,14 +453,12 @@ base_init(void *g_class)
 {
 	GstElementClass *element_class = g_class;
 	GstPadTemplate *template;
-	GstElementDetails details;
 
-	details.longname = "av audio decoder";
-	details.klass = "Coder/Decoder/Audio";
-	details.description = "Audio decoder wrapper for libavcodec";
-	details.author = "Felipe Contreras";
-
-	gst_element_class_set_details(element_class, &details);
+	gst_element_class_set_details_simple(element_class,
+			"av audio decoder",
+			"Coder/Decoder/Audio",
+			"Audio decoder wrapper for libavcodec",
+			"Felipe Contreras");
 
 	template = gst_pad_template_new("src", GST_PAD_SRC,
 			GST_PAD_ALWAYS,
