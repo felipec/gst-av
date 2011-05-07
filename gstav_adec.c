@@ -236,9 +236,8 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 			if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
 				GstBuffer *out_buf;
-				out_buf = gst_buffer_new();
-				out_buf->data = self->buffer_data + self->ring.out;
-				out_buf->size = BUFFER_SIZE;
+				out_buf = gst_buffer_new_and_alloc(BUFFER_SIZE);
+				memcpy(out_buf->data, self->buffer_data + self->ring.out, out_buf->size);
 				calculate_timestamp(self, out_buf);
 				gst_buffer_set_caps(out_buf, self->srcpad->caps);
 
