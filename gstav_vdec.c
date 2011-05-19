@@ -41,8 +41,6 @@ static GstBuffer *convert_frame(struct obj *self, AVFrame *frame)
 	out_buf = gst_buffer_new_and_alloc(ctx->width * ctx->height * 3 / 2);
 	gst_buffer_set_caps(out_buf, self->srcpad->caps);
 
-	for (i = 0; i < ctx->height * ctx->width * 3 / 2; i++)
-		out_buf->data[i] = 0;
 	p = out_buf->data;
 	for (i = 0; i < ctx->height; i++)
 		memcpy(p + i * ctx->width, frame->data[0] + i * frame->linesize[0], ctx->width);
