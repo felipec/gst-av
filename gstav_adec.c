@@ -348,7 +348,7 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 
 		stream_header = gst_structure_get_value(in_struc, "streamheader");
 		if (!stream_header)
-			return false;
+			return true;
 
 		stream_info = gst_value_array_get_value(stream_header, 0);
 
