@@ -17,17 +17,13 @@
 #include <string.h> /* for memcpy */
 #include <stdbool.h>
 
+#include "gstav_parse.h"
+
 #define GST_CAT_DEFAULT gstav_debug
 
 static GstElementClass *parent_class;
 
-struct obj {
-	GstElement element;
-	GstPad *sinkpad, *srcpad;
-	AVCodec *codec;
-	AVCodecContext *av_ctx;
-	bool initialized;
-};
+#define obj gst_av_vdec
 
 struct obj_class {
 	GstElementClass parent_class;
@@ -83,6 +79,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			ret = GST_FLOW_ERROR;
 			goto leave;
 		}
+
+		if (self->parse_func)
+			self->parse_func(self, buf);
 
 		new_caps = gst_caps_new_empty();
 
@@ -204,17 +203,6 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	if (!ctx->time_base.num)
 		ctx->time_base = (AVRational){ 1, 0 };
 
-	codec_data = gst_structure_get_value(in_struc, "codec_data");
-	if (!codec_data)
-		goto next;
-	buf = gst_value_get_buffer(codec_data);
-	if (!buf)
-		goto next;
-	ctx->extradata = malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
-	memcpy(ctx->extradata, buf->data, buf->size);
-	ctx->extradata_size = buf->size;
-
-next:
 	name = gst_structure_get_name(in_struc);
 	if (strcmp(name, "video/x-h263") == 0)
 		codec_id = CODEC_ID_H263;
@@ -294,6 +282,32 @@ next:
 	if (!self->codec)
 		return false;
 
+	switch (codec_id) {
+	case CODEC_ID_H263:
+		self->parse_func = gst_av_h263_parse;
+		break;
+	case CODEC_ID_H264:
+		self->parse_func = gst_av_h264_parse;
+		break;
+	case CODEC_ID_MPEG4:
+		self->parse_func = gst_av_mpeg4_parse;
+		break;
+	}
+
+	codec_data = gst_structure_get_value(in_struc, "codec_data");
+	if (!codec_data)
+		goto next;
+	buf = gst_value_get_buffer(codec_data);
+	if (!buf)
+		goto next;
+	ctx->extradata = malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
+	memcpy(ctx->extradata, buf->data, buf->size);
+	ctx->extradata_size = buf->size;
+
+	if (self->parse_func)
+		self->parse_func(self, buf);
+
+next:
 	return true;
 }
 

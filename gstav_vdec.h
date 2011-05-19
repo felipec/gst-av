@@ -10,10 +10,21 @@
 #ifndef GST_AV_VDEC_H
 #define GST_AV_VDEC_H
 
-#include <glib-object.h>
+#include <gst/gst.h>
+#include <libavcodec/avcodec.h>
+#include <stdbool.h>
 
 #define GST_AV_VDEC_TYPE (gst_av_vdec_get_type())
 
 GType gst_av_vdec_get_type(void);
+
+struct gst_av_vdec {
+	GstElement element;
+	GstPad *sinkpad, *srcpad;
+	AVCodec *codec;
+	AVCodecContext *av_ctx;
+	bool initialized;
+	bool (*parse_func)(struct gst_av_vdec *vdec, GstBuffer *buf);
+};
 
 #endif /* GST_AV_VDEC_H */
