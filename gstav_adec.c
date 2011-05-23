@@ -150,6 +150,16 @@ vorbis_header(struct obj *self, GstBuffer *buf)
 	return 1;
 }
 
+static int
+flac_header(struct obj *self, GstBuffer *buf)
+{
+	unsigned type = (buf->data[0] & 0x7F);
+	/* frame sync code */
+	if (type == 127)
+		return 0;
+	return 1;
+}
+
 static inline void
 calculate_timestamp(struct obj *self, GstBuffer *out_buf)
 {
@@ -345,6 +355,7 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 		GstBuffer *buf;
 
 		codec_id = CODEC_ID_FLAC;
+		self->header_func = flac_header;
 
 		stream_header = gst_structure_get_value(in_struc, "streamheader");
 		if (!stream_header)
