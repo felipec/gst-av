@@ -73,7 +73,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		GstStructure *struc;
 
 		self->initialized = true;
-		if (avcodec_open(ctx, self->codec) < 0) {
+		if (gst_av_codec_open(ctx, self->codec) < 0) {
 			ret = GST_FLOW_ERROR;
 			goto leave;
 		}
@@ -160,7 +160,7 @@ change_state(GstElement *element, GstStateChange transition)
 	switch (transition) {
 	case GST_STATE_CHANGE_READY_TO_NULL:
 		if (self->av_ctx) {
-			avcodec_close(self->av_ctx);
+			gst_av_codec_close(self->av_ctx);
 			av_freep(&self->av_ctx);
 		}
 		break;

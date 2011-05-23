@@ -44,7 +44,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		GstStructure *struc;
 
 		self->initialized = true;
-		if (avcodec_open(ctx, self->codec) < 0) {
+		if (gst_av_codec_open(ctx, self->codec) < 0) {
 			ret = GST_FLOW_ERROR;
 			goto leave;
 		}

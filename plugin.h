@@ -14,4 +14,10 @@
 
 extern GstDebugCategory *gstav_debug;
 
+struct AVCodecContext;
+struct AVCodec;
+
+int gst_av_codec_open(struct AVCodecContext *avctx, struct AVCodec *codec);
+int gst_av_codec_close(struct AVCodecContext *avctx);
+
 #endif /* PLUGIN_H */
