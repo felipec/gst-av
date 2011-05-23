@@ -116,7 +116,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 	read = avcodec_decode_video2(ctx, frame, &got_pic, &pkt);
 	if (read < 0) {
-		ret = GST_FLOW_ERROR;
+		GST_WARNING_OBJECT(self, "error: %i", read);
 		goto leave;
 	}
 

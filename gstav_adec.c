@@ -231,7 +231,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			buffer_size = self->buffer_size - self->ring.in;
 			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
 			if (read < 0) {
-				ret = GST_FLOW_ERROR;
+				GST_WARNING_OBJECT(self, "error: %i", read);
 				break;
 			}
 
