@@ -226,6 +226,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			void *buffer_data;
 			int buffer_size;
 			int read;
+			unsigned total_buffer_size;
 
 			buffer_data = self->buffer_data + self->ring.in;
 			buffer_size = self->buffer_size - self->ring.in;
@@ -244,9 +245,14 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 				self->ring.out = 0;
 			}
 
-			if (self->ring.in - self->ring.out >= BUFFER_SIZE) {
+			if (BUFFER_SIZE > 0)
+				total_buffer_size = BUFFER_SIZE;
+			else
+				total_buffer_size = buffer_size;
+
+			if (self->ring.in - self->ring.out >= total_buffer_size) {
 				GstBuffer *out_buf;
-				out_buf = gst_buffer_new_and_alloc(BUFFER_SIZE);
+				out_buf = gst_buffer_new_and_alloc(total_buffer_size);
 				memcpy(out_buf->data, self->buffer_data + self->ring.out, out_buf->size);
 				calculate_timestamp(self, out_buf);
 				gst_buffer_set_caps(out_buf, self->srcpad->caps);
