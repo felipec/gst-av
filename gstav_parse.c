@@ -512,8 +512,6 @@ bool gst_av_h264_parse(struct gst_av_vdec *vdec, GstBuffer *buf)
 
 try_again:
 	if (avc) {
-		unsigned tsize;
-
 		/* provided buffer is then codec_data */
 		if (get_bits_left(&s) < 32)
 			goto not_enough_data;
@@ -522,7 +520,7 @@ try_again:
 		if ((get_bits(&s, 8) & 0x1F) == 0) {
 			return false;
 		}
-		tsize = get_bits(&s, 16);
+		skip_bits(&s, 16);
 	} else {
 		/* frame size is recorded in Sequence Parameter Set (SPS) */
 		/* locate SPS NAL unit in bytestream */
