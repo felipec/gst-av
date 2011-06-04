@@ -180,8 +180,10 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 {
 	struct obj *self;
 	GstFlowReturn ret = GST_FLOW_OK;
+	AVCodecContext *av_ctx;
 
 	self = (struct obj *)((GstObject *)pad)->parent;
+	av_ctx = self->av_ctx;
 
 	if (G_UNLIKELY(!self->got_header)) {
 		int hdr = self->header_func(self, buf);
@@ -191,22 +193,22 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			int bps;
 
 			self->got_header = true;
-			if (gst_av_codec_open(self->av_ctx, self->codec) < 0) {
+			if (gst_av_codec_open(av_ctx, self->codec) < 0) {
 				ret = GST_FLOW_ERROR;
 				goto leave;
 			}
 
-			bps = av_get_bits_per_sample_fmt(self->av_ctx->sample_fmt);
+			bps = av_get_bits_per_sample_fmt(av_ctx->sample_fmt);
 			self->bps = bps;
 
 			s = gst_structure_new("audio/x-raw-int",
-					"rate", G_TYPE_INT, self->av_ctx->sample_rate,
-					"channels", G_TYPE_INT, self->av_ctx->channels,
+					"rate", G_TYPE_INT, av_ctx->sample_rate,
+					"channels", G_TYPE_INT, av_ctx->channels,
 					"endianness", G_TYPE_INT, G_BYTE_ORDER,
 					"width", G_TYPE_INT, bps,
 					NULL);
 
-			switch (self->av_ctx->sample_fmt) {
+			switch (av_ctx->sample_fmt) {
 			case AV_SAMPLE_FMT_S16:
 			case AV_SAMPLE_FMT_S32:
 				gst_structure_set(s,
@@ -253,7 +255,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 			buffer_data = self->buffer_data + self->ring.in;
 			buffer_size = self->buffer_size - self->ring.in;
-			read = avcodec_decode_audio3(self->av_ctx, buffer_data, &buffer_size, &pkt);
+			read = avcodec_decode_audio3(av_ctx, buffer_data, &buffer_size, &pkt);
 			if (read < 0) {
 				GST_WARNING_OBJECT(self, "error: %i", read);
 				break;
