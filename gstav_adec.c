@@ -47,6 +47,7 @@ struct obj {
 	struct ring ring;
 	int (*header_func)(struct obj *self, GstBuffer *buf);
 	uint64_t next_timestamp;
+	int bps;
 };
 
 struct obj_class {
@@ -166,7 +167,7 @@ calculate_timestamp(struct obj *self, GstBuffer *out_buf)
 {
 	uint32_t samples;
 
-	samples = out_buf->size / (self->av_ctx->channels * sizeof(int16_t));
+	samples = out_buf->size / (self->av_ctx->channels * (self->bps >> 3));
 
 	out_buf->timestamp = self->timestamp;
 	out_buf->duration = gst_util_uint64_scale_int(samples, GST_SECOND, self->av_ctx->sample_rate);
@@ -185,28 +186,43 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	if (G_UNLIKELY(!self->got_header)) {
 		int hdr = self->header_func(self, buf);
 		if (!hdr) {
+			GstCaps *new_caps;
+			GstStructure *s;
+			int bps;
+
 			self->got_header = true;
 			if (gst_av_codec_open(self->av_ctx, self->codec) < 0) {
 				ret = GST_FLOW_ERROR;
 				goto leave;
 			}
 
-			{
-				GstCaps *new_caps;
+			bps = av_get_bits_per_sample_fmt(self->av_ctx->sample_fmt);
+			self->bps = bps;
 
-				new_caps = gst_caps_new_simple("audio/x-raw-int",
-						"rate", G_TYPE_INT, self->av_ctx->sample_rate,
+			s = gst_structure_new("audio/x-raw-int",
+					"rate", G_TYPE_INT, self->av_ctx->sample_rate,
+					"channels", G_TYPE_INT, self->av_ctx->channels,
+					"endianness", G_TYPE_INT, G_BYTE_ORDER,
+					"width", G_TYPE_INT, bps,
+					NULL);
+
+			switch (self->av_ctx->sample_fmt) {
+			case AV_SAMPLE_FMT_S16:
+			case AV_SAMPLE_FMT_S32:
+				gst_structure_set(s,
 						"signed", G_TYPE_BOOLEAN, TRUE,
-						"channels", G_TYPE_INT, self->av_ctx->channels,
-						"endianness", G_TYPE_INT, G_BYTE_ORDER,
-						"width", G_TYPE_INT, 16,
-						"depth", G_TYPE_INT, 16,
+						"depth", G_TYPE_INT, bps,
 						NULL);
-
-				GST_INFO_OBJECT(self, "caps are: %" GST_PTR_FORMAT, new_caps);
-				gst_pad_set_caps(self->srcpad, new_caps);
-				gst_caps_unref(new_caps);
+				break;
+			default:
+				break;
 			}
+
+			new_caps = gst_caps_new_full(s, NULL);
+
+			GST_INFO_OBJECT(self, "caps are: %" GST_PTR_FORMAT, new_caps);
+			gst_pad_set_caps(self->srcpad, new_caps);
+			gst_caps_unref(new_caps);
 		}
 	}
 
@@ -408,8 +424,8 @@ generate_src_template(void)
 			"rate", GST_TYPE_INT_RANGE, 8000, 96000,
 			"signed", G_TYPE_BOOLEAN, TRUE,
 			"endianness", G_TYPE_INT, G_BYTE_ORDER,
-			"width", G_TYPE_INT, 16,
-			"depth", G_TYPE_INT, 16,
+			"width", GST_TYPE_INT_RANGE, 16, 32,
+			"depth", GST_TYPE_INT_RANGE, 16, 32,
 			"channels", GST_TYPE_INT_RANGE, 1, 256,
 			NULL);
 
