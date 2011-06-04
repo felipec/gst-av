@@ -46,6 +46,7 @@ struct obj {
 	size_t buffer_size;
 	struct ring ring;
 	int (*header_func)(struct obj *self, GstBuffer *buf);
+	uint64_t next_timestamp;
 };
 
 struct obj_class {
@@ -219,8 +220,14 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		memcpy(pkt.data, buf->data, buf->size);
 		memset(pkt.data + pkt.size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 
-		if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE))
-			self->timestamp = buf->timestamp;
+		if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE)) {
+			self->next_timestamp = self->timestamp = buf->timestamp;
+		} else if (self->next_timestamp != buf->timestamp) {
+			GST_WARNING_OBJECT(self, "reseting timestamp");
+			self->next_timestamp = self->timestamp = buf->timestamp;
+		}
+
+		self->next_timestamp += buf->duration;
 
 		do {
 			void *buffer_data;
