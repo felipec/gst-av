@@ -353,11 +353,30 @@ sink_event(GstPad *pad, GstEvent *event)
 		ret = gst_pad_push_event(self->srcpad, event);
 		self->timestamp = GST_CLOCK_TIME_NONE;
 		break;
+	case GST_EVENT_EOS: {
+		/* flush current buffer */
+		GstBuffer *out_buf;
+		GstFlowReturn r;
+
+		out_buf = gst_buffer_new_and_alloc(self->ring.in - self->ring.out);
+		memcpy(out_buf->data, self->buffer_data + self->ring.out, out_buf->size);
+		calculate_timestamp(self, out_buf);
+		gst_buffer_set_caps(out_buf, self->srcpad->caps);
+
+		self->ring.out += out_buf->size;
+
+		r = gst_pad_push(self->srcpad, out_buf);
+		if (r != GST_FLOW_OK)
+			goto leave;
+		ret = gst_pad_push_event(self->srcpad, event);
+		break;
+	}
 	default:
 		ret = gst_pad_push_event(self->srcpad, event);
 		break;
 	}
 
+leave:
 	gst_object_unref(self);
 
 	return ret;
