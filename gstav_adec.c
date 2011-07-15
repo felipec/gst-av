@@ -198,7 +198,11 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 				goto leave;
 			}
 
+#ifdef FF_API_GET_BITS_PER_SAMPLE_FMT
 			bps = av_get_bits_per_sample_fmt(av_ctx->sample_fmt);
+#else
+			bps = av_get_bytes_per_sample(av_ctx->sample_fmt) << 3;
+#endif
 			self->bps = bps;
 
 			s = gst_structure_new("audio/x-raw-int",
