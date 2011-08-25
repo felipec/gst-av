@@ -108,9 +108,10 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		gst_caps_unref(new_caps);
 	}
 
-	av_init_packet(&pkt);
-	pkt.data = buf->data;
-	pkt.size = buf->size;
+	av_new_packet(&pkt, buf->size);
+
+	memcpy(pkt.data, buf->data, buf->size);
+	memset(pkt.data + pkt.size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 
 	frame = avcodec_alloc_frame();
 
@@ -119,6 +120,8 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		GST_WARNING_OBJECT(self, "error: %i", read);
 		goto leave;
 	}
+
+	av_free_packet(&pkt);
 
 	if (got_pic) {
 		GstBuffer *out_buf;
