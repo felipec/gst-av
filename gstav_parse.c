@@ -534,6 +534,8 @@ try_again:
 
 		skip_bits(&s, 16);
 	} else {
+		s.index = 0;
+
 		/* frame size is recorded in Sequence Parameter Set (SPS) */
 		/* locate SPS NAL unit in bytestream */
 		while (get_bits_left(&s) >= 32) {
@@ -551,7 +553,6 @@ try_again:
 	if (get_bits_left(&s) < 40) {
 		if (avc) {
 			avc = false;
-			init_get_bits(&s, buf->data, buf->size * 8);
 			goto try_again;
 		} else {
 			goto not_enough_data;
