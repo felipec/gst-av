@@ -15,6 +15,7 @@
 #include <gst/gst.h>
 #include "gstav_vdec.h"
 
+#include "gstav_parse.h"
 #include "get_bits.h"
 
 static inline void
