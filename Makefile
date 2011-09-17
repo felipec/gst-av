@@ -10,6 +10,7 @@ GST_LIBS := $(shell pkg-config --libs gstreamer-0.10 gstreamer-tag-0.10)
 
 AVCODEC_CFLAGS := $(shell pkg-config --cflags libavcodec libavutil)
 AVCODEC_LIBS := $(shell pkg-config --libs libavcodec libavutil)
+AVCODEC_LIBDIR := $(shell pkg-config --variable=libdir libavcodec)
 
 all:
 
@@ -25,7 +26,7 @@ gst_plugin := libgstav.so
 $(gst_plugin): plugin.o gstav_adec.o gstav_vdec.o gstav_venc.o \
 	gstav_h263enc.o gstav_h264enc.o gstav_parse.o
 $(gst_plugin): override CFLAGS += -fPIC $(GST_CFLAGS) $(AVCODEC_CFLAGS) -D VERSION='"$(version)"'
-$(gst_plugin): override LIBS += $(GST_LIBS) $(AVCODEC_LIBS)
+$(gst_plugin): override LIBS += $(GST_LIBS) $(AVCODEC_LIBS) -Wl,--enable-new-dtags -Wl,-rpath,$(AVCODEC_LIBDIR)
 
 targets += $(gst_plugin)
 
