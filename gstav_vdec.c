@@ -60,7 +60,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	struct obj *self;
 	GstFlowReturn ret = GST_FLOW_OK;
 	AVCodecContext *ctx;
-	AVFrame *frame;
+	AVFrame *frame = NULL;
 	int got_pic;
 	AVPacket pkt;
 	int read;
@@ -116,12 +116,11 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	frame = avcodec_alloc_frame();
 
 	read = avcodec_decode_video2(ctx, frame, &got_pic, &pkt);
+	av_free_packet(&pkt);
 	if (read < 0) {
 		GST_WARNING_OBJECT(self, "error: %i", read);
 		goto leave;
 	}
-
-	av_free_packet(&pkt);
 
 	if (got_pic) {
 		GstBuffer *out_buf;
@@ -132,6 +131,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	}
 
 leave:
+	av_free(frame);
 	gst_buffer_unref(buf);
 
 	return ret;
