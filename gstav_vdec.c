@@ -378,6 +378,50 @@ generate_sink_template(void)
 	return caps;
 }
 
+static void get_delayed(struct obj *self)
+{
+	AVPacket pkt;
+	AVFrame *frame;
+	int got_pic;
+
+	av_init_packet(&pkt);
+	frame = avcodec_alloc_frame();
+
+	pkt.data = NULL;
+	pkt.size = 0;
+
+	do {
+		GstFlowReturn ret;
+		avcodec_decode_video2(self->av_ctx, frame, &got_pic, &pkt);
+		if (got_pic) {
+			GstBuffer *out_buf;
+			out_buf = convert_frame(self, frame);
+			ret = gst_pad_push(self->srcpad, out_buf);
+			if (ret != GST_FLOW_OK)
+				break;
+		}
+	} while (got_pic);
+
+	av_free(frame);
+}
+
+static gboolean sink_event(GstPad *pad, GstEvent *event)
+{
+	struct obj *self;
+	gboolean ret = TRUE;
+
+	self = (struct obj *)(gst_pad_get_parent(pad));
+
+	if (GST_EVENT_TYPE(event) == GST_EVENT_EOS)
+		get_delayed(self);
+
+	ret = gst_pad_push_event(self->srcpad, event);
+
+	gst_object_unref(self);
+
+	return ret;
+}
+
 static void
 instance_init(GTypeInstance *instance, void *g_class)
 {
@@ -388,6 +432,7 @@ instance_init(GTypeInstance *instance, void *g_class)
 		gst_pad_new_from_template(gst_element_class_get_pad_template(element_class, "sink"), "sink");
 
 	gst_pad_set_chain_function(self->sinkpad, pad_chain);
+	gst_pad_set_event_function(self->sinkpad, sink_event);
 
 	self->srcpad =
 		gst_pad_new_from_template(gst_element_class_get_pad_template(element_class, "src"), "src");
