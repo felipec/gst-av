@@ -51,6 +51,8 @@ static GstBuffer *convert_frame(struct obj *self, AVFrame *frame)
 	for (i = 0; i < ctx->height / 2; i++)
 		memcpy(p + i * ctx->width / 2, frame->data[2] + i * frame->linesize[2], ctx->width / 2);
 
+	out_buf->timestamp = frame->pkt_pts;
+
 	return out_buf;
 }
 
@@ -115,6 +117,8 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 	frame = avcodec_alloc_frame();
 
+	pkt.pts = buf->timestamp;
+
 	read = avcodec_decode_video2(ctx, frame, &got_pic, &pkt);
 	av_free_packet(&pkt);
 	if (read < 0) {
@@ -125,8 +129,6 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	if (got_pic) {
 		GstBuffer *out_buf;
 		out_buf = convert_frame(self, frame);
-		out_buf->timestamp = buf->timestamp;
-		out_buf->duration = buf->duration;
 		ret = gst_pad_push(self->srcpad, out_buf);
 	}
 
