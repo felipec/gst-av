@@ -526,8 +526,6 @@ try_again:
 		if ((d & 0xfc) != 0xfc)
 			return FALSE;
 		d = get_bits(&s, 8);
-		if ((d & 0xe0) != 0xe0)
-			return FALSE;
 
 		/* number of SPS */
 		if ((d & 0x1f) == 0)
