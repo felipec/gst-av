@@ -198,7 +198,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 				goto leave;
 			}
 
-#if LIBAVUTIL_VERSION_MAJOR < 52
+#if LIBAVUTIL_VERSION_MAJOR < 51
+			bps = av_get_bits_per_sample_format(av_ctx->sample_fmt);
+#elif LIBAVUTIL_VERSION_MAJOR < 52
 			bps = av_get_bits_per_sample_fmt(av_ctx->sample_fmt);
 #else
 			bps = av_get_bytes_per_sample(av_ctx->sample_fmt) << 3;
