@@ -32,7 +32,7 @@ struct obj_class {
 	GstElementClass parent_class;
 };
 
-void init_ctx(struct gst_av_venc *base, AVCodecContext *ctx)
+static void init_ctx(struct gst_av_venc *base, AVCodecContext *ctx)
 {
 	ctx->flags = 0;
 	ctx->flags2 = 0;
