@@ -214,8 +214,13 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 					NULL);
 
 			switch (av_ctx->sample_fmt) {
+#if LIBAVCODEC_VERSION_MAJOR < 54
+			case SAMPLE_FMT_S16:
+			case SAMPLE_FMT_S32:
+#else
 			case AV_SAMPLE_FMT_S16:
 			case AV_SAMPLE_FMT_S32:
+#endif
 				gst_structure_set(s,
 						"signed", G_TYPE_BOOLEAN, TRUE,
 						"depth", G_TYPE_INT, bps,
