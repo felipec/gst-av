@@ -489,7 +489,7 @@ generate_sink_template(void)
 
 	struc = gst_structure_new("audio/mpeg",
 			"mpegversion", G_TYPE_INT, 1,
-			"layer", G_TYPE_INT, 3,
+			"layer", GST_TYPE_INT_RANGE, 1, 3,
 			"parsed", G_TYPE_BOOLEAN, TRUE,
 			NULL);
 
