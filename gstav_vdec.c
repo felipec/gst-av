@@ -29,27 +29,66 @@ struct obj_class {
 	GstElementClass parent_class;
 };
 
-/* TODO there must be a more straight-forward way */
+static int get_buffer(AVCodecContext *avctx, AVFrame *pic)
+{
+	GstBuffer *out_buf;
+	GstFlowReturn ret;
+	struct obj *self = avctx->opaque;
+
+	ret = gst_pad_alloc_buffer_and_set_caps(self->srcpad, 0,
+			avctx->width * avctx->height * 3 / 2,
+			self->srcpad->caps, &out_buf);
+	if (ret != GST_FLOW_OK)
+		return 1;
+
+	gst_buffer_ref(out_buf);
+
+	pic->opaque = out_buf;
+	pic->type = FF_BUFFER_TYPE_USER;
+
+	pic->data[0] = out_buf->data;
+	pic->linesize[0] = avctx->width;
+	pic->data[1] = pic->data[0] + pic->linesize[0] * avctx->height;
+	pic->linesize[1] = avctx->width / 2;
+	pic->data[2] = pic->data[1] + pic->linesize[1] * avctx->height / 2;
+	pic->linesize[2] = avctx->width / 2;
+
+	if (avctx->pkt)
+		pic->pkt_pts = avctx->pkt->pts;
+	else
+		pic->pkt_pts = AV_NOPTS_VALUE;
+
+	return 0;
+}
+
+static void release_buffer(AVCodecContext *avctx, AVFrame *pic)
+{
+	for (int i = 0; i < 3; i++)
+		pic->data[i] = NULL;
+
+	gst_buffer_unref(pic->opaque);
+}
+
+static int reget_buffer(AVCodecContext *avctx, AVFrame *pic)
+{
+	if (!pic->data[0]) {
+		pic->buffer_hints |= FF_BUFFER_HINTS_READABLE;
+		return get_buffer(avctx, pic);
+	}
+
+	if (avctx->pkt)
+		pic->pkt_pts = avctx->pkt->pts;
+	else
+		pic->pkt_pts = AV_NOPTS_VALUE;
+
+	return 0;
+}
+
 static GstBuffer *convert_frame(struct obj *self, AVFrame *frame)
 {
-	AVCodecContext *ctx;
-	int i;
 	GstBuffer *out_buf;
-	guint8 *p;
 
-	ctx = self->av_ctx;
-	out_buf = gst_buffer_new_and_alloc(ctx->width * ctx->height * 3 / 2);
-	gst_buffer_set_caps(out_buf, self->srcpad->caps);
-
-	p = out_buf->data;
-	for (i = 0; i < ctx->height; i++)
-		memcpy(p + i * ctx->width, frame->data[0] + i * frame->linesize[0], ctx->width);
-	p = out_buf->data + ctx->width * ctx->height;
-	for (i = 0; i < ctx->height / 2; i++)
-		memcpy(p + i * ctx->width / 2, frame->data[1] + i * frame->linesize[1], ctx->width / 2);
-	p = out_buf->data + ctx->width * ctx->height * 5 / 4;
-	for (i = 0; i < ctx->height / 2; i++)
-		memcpy(p + i * ctx->width / 2, frame->data[2] + i * frame->linesize[2], ctx->width / 2);
+	out_buf = frame->opaque;
 
 #if LIBAVCODEC_VERSION_MAJOR < 53
 	out_buf->timestamp = frame->reordered_opaque;
@@ -155,11 +194,19 @@ change_state(GstElement *element, GstStateChange transition)
 	self = (struct obj *)element;
 
 	switch (transition) {
-	case GST_STATE_CHANGE_NULL_TO_READY:
-		self->av_ctx = avcodec_alloc_context();
+	case GST_STATE_CHANGE_NULL_TO_READY: {
+		AVCodecContext *avctx;
+		self->av_ctx = avctx = avcodec_alloc_context();
+
+		avctx->get_buffer = get_buffer;
+		avctx->release_buffer = release_buffer;
+		avctx->reget_buffer = reget_buffer;
+		avctx->opaque = self;
+		avctx->flags |= CODEC_FLAG_EMU_EDGE;
+
 		self->initialized = false;
 		break;
-
+	}
 	default:
 		break;
 	}
