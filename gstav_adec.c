@@ -322,7 +322,6 @@ change_state(GstElement *element, GstStateChange transition)
 
 	switch (transition) {
 	case GST_STATE_CHANGE_NULL_TO_READY:
-		self->av_ctx = avcodec_alloc_context();
 		self->got_header = false;
 		av_new_packet(&self->pkt, AVCODEC_MAX_AUDIO_FRAME_SIZE);
 		self->buffer_size = 3 * AVCODEC_MAX_AUDIO_FRAME_SIZE;
@@ -404,22 +403,37 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	GstStructure *in_struc;
 	const char *name;
 	int codec_id;
+	AVCodecContext *ctx;
 
 	self = (struct obj *)((GstObject *)pad)->parent;
 
 	in_struc = gst_caps_get_structure(caps, 0);
 
 	name = gst_structure_get_name(in_struc);
-	if (strcmp(name, "audio/x-vorbis") == 0) {
+	if (strcmp(name, "audio/x-vorbis") == 0)
 		codec_id = CODEC_ID_VORBIS;
+	else if (strcmp(name, "audio/x-flac") == 0)
+		codec_id = CODEC_ID_FLAC;
+	else if (strcmp(name, "audio/mpeg") == 0)
+		codec_id = CODEC_ID_MP3;
+	else
+		codec_id = CODEC_ID_NONE;
+
+	self->codec = avcodec_find_decoder(codec_id);
+	if (!self->codec)
+		return false;
+
+	self->av_ctx = ctx = avcodec_alloc_context3(self->codec);
+
+	switch (codec_id) {
+	case CODEC_ID_VORBIS:
 		self->header_func = vorbis_header;
-	}
-	else if (strcmp(name, "audio/x-flac") == 0) {
+		break;
+	case CODEC_ID_FLAC: {
 		const GValue *stream_header;
 		const GValue *stream_info;
 		GstBuffer *buf;
 
-		codec_id = CODEC_ID_FLAC;
 		self->header_func = flac_header;
 
 		stream_header = gst_structure_get_value(in_struc, "streamheader");
@@ -432,22 +446,17 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 		buf->data += 17;
 		buf->size -= 17;
 
-		self->av_ctx->extradata = malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
-		memcpy(self->av_ctx->extradata, buf->data, buf->size);
-		self->av_ctx->extradata_size = buf->size;
+		ctx->extradata = malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
+		memcpy(ctx->extradata, buf->data, buf->size);
+		ctx->extradata_size = buf->size;
+		break;
 	}
-	else if (strcmp(name, "audio/mpeg") == 0) {
-		codec_id = CODEC_ID_MP3;
-		gst_structure_get_int(in_struc, "rate", &self->av_ctx->sample_rate);
-		gst_structure_get_int(in_struc, "channels", &self->av_ctx->channels);
+	case CODEC_ID_MP3: {
+		gst_structure_get_int(in_struc, "rate", &ctx->sample_rate);
+		gst_structure_get_int(in_struc, "channels", &ctx->channels);
+		break;
 	}
-	else
-		codec_id = CODEC_ID_NONE;
-
-	self->codec = avcodec_find_decoder(codec_id);
-	if (!self->codec)
-		return false;
-
+	}
 	return true;
 }
 

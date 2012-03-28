@@ -112,7 +112,6 @@ change_state(GstElement *element, GstStateChange transition)
 
 	switch (transition) {
 	case GST_STATE_CHANGE_NULL_TO_READY:
-		self->av_ctx = avcodec_alloc_context();
 		self->initialized = false;
 		break;
 
@@ -148,9 +147,14 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	AVCodecContext *ctx;
 
 	self = (struct obj *)((GstObject *)pad)->parent;
-	ctx = self->av_ctx;
 
 	in_struc = gst_caps_get_structure(caps, 0);
+
+	self->codec = avcodec_find_encoder(self->codec_id);
+	if (!self->codec)
+		return false;
+
+	self->av_ctx = ctx = avcodec_alloc_context3(self->codec);
 
 	gst_structure_get_int(in_struc, "width", &ctx->width);
 	gst_structure_get_int(in_struc, "height", &ctx->height);
@@ -160,10 +164,6 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 
 	gst_structure_get_fraction(in_struc, "framerate",
 			&ctx->time_base.den, &ctx->time_base.num);
-
-	self->codec = avcodec_find_encoder(self->codec_id);
-	if (!self->codec)
-		return false;
 
 	ctx->pix_fmt = PIX_FMT_YUV420P;
 	ctx->rtp_payload_size = 1;

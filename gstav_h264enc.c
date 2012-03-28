@@ -81,7 +81,6 @@ change_state(GstElement *element, GstStateChange transition)
 
 	switch (transition) {
 	case GST_STATE_CHANGE_NULL_TO_READY:
-		base->av_ctx = avcodec_alloc_context();
 		base->initialized = false;
 		break;
 

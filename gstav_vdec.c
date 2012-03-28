@@ -194,19 +194,10 @@ change_state(GstElement *element, GstStateChange transition)
 	self = (struct obj *)element;
 
 	switch (transition) {
-	case GST_STATE_CHANGE_NULL_TO_READY: {
-		AVCodecContext *avctx;
-		self->av_ctx = avctx = avcodec_alloc_context();
-
-		avctx->get_buffer = get_buffer;
-		avctx->release_buffer = release_buffer;
-		avctx->reget_buffer = reget_buffer;
-		avctx->opaque = self;
-		avctx->flags |= CODEC_FLAG_EMU_EDGE;
-
+	case GST_STATE_CHANGE_NULL_TO_READY:
 		self->initialized = false;
 		break;
-	}
+
 	default:
 		break;
 	}
@@ -246,19 +237,6 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	ctx = self->av_ctx;
 
 	in_struc = gst_caps_get_structure(caps, 0);
-
-	gst_structure_get_int(in_struc, "width", &ctx->width);
-	gst_structure_get_int(in_struc, "height", &ctx->height);
-
-	gst_structure_get_fraction(in_struc, "pixel-aspect-ratio",
-			&ctx->sample_aspect_ratio.num, &ctx->sample_aspect_ratio.den);
-
-	gst_structure_get_fraction(in_struc, "framerate",
-			&ctx->time_base.den, &ctx->time_base.num);
-
-	/* bug in xvimagesink? */
-	if (!ctx->time_base.num)
-		ctx->time_base = (AVRational){ 1, 0 };
 
 	name = gst_structure_get_name(in_struc);
 	if (strcmp(name, "video/x-h263") == 0)
@@ -350,6 +328,27 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 		self->parse_func = gst_av_mpeg4_parse;
 		break;
 	}
+
+	self->av_ctx = ctx = avcodec_alloc_context3(self->codec);
+
+	ctx->get_buffer = get_buffer;
+	ctx->release_buffer = release_buffer;
+	ctx->reget_buffer = reget_buffer;
+	ctx->opaque = self;
+	ctx->flags |= CODEC_FLAG_EMU_EDGE;
+
+	gst_structure_get_int(in_struc, "width", &ctx->width);
+	gst_structure_get_int(in_struc, "height", &ctx->height);
+
+	gst_structure_get_fraction(in_struc, "pixel-aspect-ratio",
+			&ctx->sample_aspect_ratio.num, &ctx->sample_aspect_ratio.den);
+
+	gst_structure_get_fraction(in_struc, "framerate",
+			&ctx->time_base.den, &ctx->time_base.num);
+
+	/* bug in xvimagesink? */
+	if (!ctx->time_base.num)
+		ctx->time_base = (AVRational){ 1, 0 };
 
 	codec_data = gst_structure_get_value(in_struc, "codec_data");
 	if (!codec_data)
