@@ -25,7 +25,7 @@ int gst_av_codec_open(AVCodecContext *avctx, AVCodec *codec)
 	int ret;
 
 	g_static_mutex_lock(&gst_av_codec_mutex);
-	ret = avcodec_open(avctx, codec);
+	ret = avcodec_open2(avctx, codec, NULL);
 	g_static_mutex_unlock(&gst_av_codec_mutex);
 
 	return ret;
