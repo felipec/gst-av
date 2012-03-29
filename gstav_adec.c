@@ -270,11 +270,39 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 			buffer_data = self->buffer_data + self->ring.in;
 			buffer_size = self->buffer_size - self->ring.in;
+#if LIBAVCODEC_VERSION_MAJOR < 54
 			read = avcodec_decode_audio3(av_ctx, buffer_data, &buffer_size, &pkt);
 			if (read < 0) {
 				GST_WARNING_OBJECT(self, "error: %i", read);
 				break;
 			}
+#else
+			AVFrame frame;
+			int got_frame = 0, planar, plane_size;
+
+			read = avcodec_decode_audio4(av_ctx, &frame, &got_frame, &pkt);
+			if (read < 0) {
+				GST_WARNING_OBJECT(self, "error: %i", read);
+				break;
+			}
+
+			if (!got_frame)
+				goto next;
+
+			planar = av_sample_fmt_is_planar(av_ctx->sample_fmt);
+			buffer_size = av_samples_get_buffer_size(&plane_size, av_ctx->channels,
+					frame.nb_samples, av_ctx->sample_fmt, 1);
+
+			memcpy(buffer_data, frame.extended_data[0], plane_size);
+
+			if (planar && av_ctx->channels > 1) {
+				uint8_t *out = ((uint8_t *)buffer_data) + plane_size;
+				for (int ch = 1; ch < av_ctx->channels; ch++) {
+					memcpy(out, frame.extended_data[ch], plane_size);
+					out += plane_size;
+				}
+			}
+#endif
 
 			self->ring.in += buffer_size;
 			if (self->ring.in >= 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE) {
@@ -301,6 +329,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 				ret = gst_pad_push(self->srcpad, out_buf);
 			}
+#if LIBAVCODEC_VERSION_MAJOR >= 54
+next:
+#endif
 			pkt.size -= read;
 			pkt.data += read;
 		} while (pkt.size > 0);
