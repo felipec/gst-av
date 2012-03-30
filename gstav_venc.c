@@ -27,6 +27,18 @@ struct obj_class {
 	GstElementClass parent_class;
 };
 
+static int64_t timestamp_to_pts(AVCodecContext *ctx, int64_t ts)
+{
+	AVRational bq = { 1, GST_SECOND * ctx->ticks_per_frame};
+	return av_rescale_q(ts / ctx->ticks_per_frame, bq, ctx->time_base);
+}
+
+static int64_t pts_to_timestamp(AVCodecContext *ctx, int64_t pts)
+{
+	AVRational bq = { 1, GST_SECOND * ctx->ticks_per_frame};
+	return av_rescale_q(pts, ctx->time_base, bq);
+}
+
 static GstFlowReturn
 pad_chain(GstPad *pad, GstBuffer *buf)
 {
@@ -79,10 +91,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	avpicture_fill((AVPicture *)frame, buf->data, PIX_FMT_YUV420P,
 			ctx->width, ctx->height);
 
-	{
-		AVRational bq = { 1, GST_SECOND * ctx->ticks_per_frame};
-		frame->pts = av_rescale_q(buf->timestamp / ctx->ticks_per_frame, bq, ctx->time_base);
-	}
+	frame->pts = timestamp_to_pts(ctx, buf->timestamp);
 
 	read = avcodec_encode_video(ctx, self->buffer, self->buffer_size, frame);
 	if (read < 0) {
@@ -96,10 +105,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	out_buf = gst_buffer_new_and_alloc(read);
 	memcpy(out_buf->data, self->buffer, read);
 	gst_buffer_set_caps(out_buf, self->srcpad->caps);
-	{
-		AVRational bq = { 1, GST_SECOND * ctx->ticks_per_frame};
-		out_buf->timestamp = av_rescale_q(ctx->coded_frame->pts, ctx->time_base, bq);
-	}
+	out_buf->timestamp = pts_to_timestamp(ctx, ctx->coded_frame->pts);
 	ret = gst_pad_push(self->srcpad, out_buf);
 
 leave:
