@@ -531,8 +531,6 @@ class_init(void *g_class, void *class_data)
 
 	parent_class = g_type_class_ref(GST_TYPE_ELEMENT);
 
-	avcodec_register_all();
-
 	gstelement_class->change_state = change_state;
 }
 

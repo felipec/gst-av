@@ -116,12 +116,6 @@ base_init(void *g_class)
 	gst_element_class_add_pad_template(element_class, template);
 }
 
-static void
-class_init(void *g_class, void *class_data)
-{
-	avcodec_register_all();
-}
-
 GType
 gst_av_h263enc_get_type(void)
 {
@@ -130,7 +124,6 @@ gst_av_h263enc_get_type(void)
 	if (G_UNLIKELY(type == 0)) {
 		GTypeInfo type_info = {
 			.class_size = sizeof(struct obj_class),
-			.class_init = class_init,
 			.base_init = base_init,
 			.instance_size = sizeof(struct obj),
 			.instance_init = instance_init,

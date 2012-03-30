@@ -49,6 +49,8 @@ plugin_init(GstPlugin *plugin)
 	gstav_debug = _gst_debug_category_new("av", 0, "libav stuff");
 #endif
 
+	avcodec_register_all();
+
 	if (!gst_element_register(plugin, "avadec", GST_RANK_PRIMARY + 1, GST_AV_ADEC_TYPE))
 		return false;
 
