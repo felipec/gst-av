@@ -26,6 +26,8 @@ struct gst_av_venc {
 	bool initialized;
 	int codec_id;
 	void (*init_ctx)(struct gst_av_venc *base, AVCodecContext *ctx);
+	uint8_t *buffer;
+	size_t buffer_size;
 };
 
 #endif /* GST_AV_VENC_H */

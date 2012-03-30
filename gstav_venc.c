@@ -84,15 +84,15 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		frame->pts = av_rescale_q(buf->timestamp / ctx->ticks_per_frame, bq, ctx->time_base);
 	}
 
-	out_buf = gst_buffer_new_and_alloc(ctx->width * ctx->height * 2);
-	gst_buffer_set_caps(out_buf, self->srcpad->caps);
-	read = avcodec_encode_video(ctx, out_buf->data, out_buf->size, frame);
+	read = avcodec_encode_video(ctx, self->buffer, self->buffer_size, frame);
 	if (read < 0) {
 		ret = GST_FLOW_ERROR;
 		goto leave;
 	}
 
-	out_buf->size = read;
+	out_buf = gst_buffer_new_and_alloc(read);
+	memcpy(out_buf->data, self->buffer, read);
+	gst_buffer_set_caps(out_buf, self->srcpad->caps);
 	{
 		AVRational bq = { 1, GST_SECOND };
 		out_buf->timestamp = av_rescale_q(ctx->coded_frame->pts, ctx->time_base, bq);
@@ -134,6 +134,9 @@ change_state(GstElement *element, GstStateChange transition)
 			gst_av_codec_close(self->av_ctx);
 			av_freep(&self->av_ctx);
 		}
+		free(self->buffer);
+		self->buffer = NULL;
+		self->buffer_size = 0;
 		break;
 
 	default:
@@ -172,6 +175,10 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	ctx->pix_fmt = PIX_FMT_YUV420P;
 	ctx->rtp_payload_size = 1;
 	ctx->me_method = ME_ZERO;
+
+	free(self->buffer);
+	self->buffer_size = ctx->width * ctx->height * 2;
+	self->buffer = malloc(self->buffer_size);
 
 	if (self->init_ctx)
 		self->init_ctx(self, ctx);
