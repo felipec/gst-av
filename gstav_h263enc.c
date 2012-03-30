@@ -22,8 +22,6 @@
 
 #define GST_CAT_DEFAULT gstav_debug
 
-static GstElementClass *parent_class;
-
 struct obj {
 	struct gst_av_venc parent;
 };
@@ -31,43 +29,6 @@ struct obj {
 struct obj_class {
 	GstElementClass parent_class;
 };
-
-static GstStateChangeReturn
-change_state(GstElement *element, GstStateChange transition)
-{
-	GstStateChangeReturn ret;
-	struct gst_av_venc *base;
-
-	base = (struct gst_av_venc *)element;
-
-	switch (transition) {
-	case GST_STATE_CHANGE_NULL_TO_READY:
-		base->initialized = false;
-		break;
-
-	default:
-		break;
-	}
-
-	ret = parent_class->change_state(element, transition);
-
-	if (ret == GST_STATE_CHANGE_FAILURE)
-		return ret;
-
-	switch (transition) {
-	case GST_STATE_CHANGE_READY_TO_NULL:
-		if (base->av_ctx) {
-			gst_av_codec_close(base->av_ctx);
-			av_freep(&base->av_ctx);
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	return ret;
-}
 
 static GstCaps *
 generate_src_template(void)
@@ -158,13 +119,7 @@ base_init(void *g_class)
 static void
 class_init(void *g_class, void *class_data)
 {
-	GstElementClass *gstelement_class = g_class;
-
-	parent_class = g_type_class_ref(GST_TYPE_ELEMENT);
-
 	avcodec_register_all();
-
-	gstelement_class->change_state = change_state;
 }
 
 GType
