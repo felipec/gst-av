@@ -131,7 +131,7 @@ change_state(GstElement *element, GstStateChange transition)
 	switch (transition) {
 	case GST_STATE_CHANGE_READY_TO_NULL:
 		if (self->av_ctx) {
-			avcodec_close(self->av_ctx);
+			gst_av_codec_close(self->av_ctx);
 			av_freep(&self->av_ctx);
 		}
 		break;
