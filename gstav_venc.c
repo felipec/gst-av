@@ -11,6 +11,7 @@
 #include "plugin.h"
 
 #include <libavcodec/avcodec.h>
+#include <libavutil/mathematics.h>
 #include <gst/tag/tag.h>
 
 #include <stdlib.h>
