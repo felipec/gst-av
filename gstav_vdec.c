@@ -137,7 +137,8 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		if (ctx->time_base.num)
 			gst_structure_set(struc,
 					"framerate", GST_TYPE_FRACTION,
-					ctx->time_base.den, ctx->time_base.num,
+					ctx->time_base.den,
+					ctx->time_base.num * ctx->ticks_per_frame,
 					NULL);
 
 		if (ctx->sample_aspect_ratio.num)
