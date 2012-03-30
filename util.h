@@ -11,6 +11,13 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stdint.h>
+
+struct AVCodecContext;
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+int64_t gstav_timestamp_to_pts(struct AVCodecContext *ctx, int64_t ts);
+int64_t gstav_pts_to_timestamp(struct AVCodecContext *ctx, int64_t pts);
 
 #endif /* UTIL_H */

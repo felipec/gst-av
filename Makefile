@@ -24,7 +24,7 @@ D = $(DESTDIR)
 gst_plugin := libgstav.so
 
 $(gst_plugin): plugin.o gstav_adec.o gstav_vdec.o gstav_venc.o \
-	gstav_h263enc.o gstav_h264enc.o gstav_parse.o
+	gstav_h263enc.o gstav_h264enc.o gstav_parse.o util.o
 $(gst_plugin): override CFLAGS += -fPIC $(GST_CFLAGS) $(AVCODEC_CFLAGS) -D VERSION='"$(version)"'
 $(gst_plugin): override LIBS += $(GST_LIBS) $(AVCODEC_LIBS) -Wl,--enable-new-dtags -Wl,-rpath,$(AVCODEC_LIBDIR)
 
