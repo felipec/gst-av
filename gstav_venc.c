@@ -90,6 +90,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		goto leave;
 	}
 
+	if (read == 0)
+		goto leave;
+
 	out_buf = gst_buffer_new_and_alloc(read);
 	memcpy(out_buf->data, self->buffer, read);
 	gst_buffer_set_caps(out_buf, self->srcpad->caps);
