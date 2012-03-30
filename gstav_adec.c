@@ -200,7 +200,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 #if LIBAVUTIL_VERSION_MAJOR < 51
 			bps = av_get_bits_per_sample_format(av_ctx->sample_fmt);
-#elif LIBAVUTIL_VERSION_MAJOR < 52
+#elif LIBAVUTIL_VERSION_MAJOR < 52 && !(LIBAVUTIL_VERSION_MAJOR == 51 && LIBAVUTIL_VERSION_MINOR >= 4)
 			bps = av_get_bits_per_sample_fmt(av_ctx->sample_fmt);
 #else
 			bps = av_get_bytes_per_sample(av_ctx->sample_fmt) << 3;
@@ -270,7 +270,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 			buffer_data = self->buffer_data + self->ring.in;
 			buffer_size = self->buffer_size - self->ring.in;
-#if LIBAVCODEC_VERSION_MAJOR < 54
+#if LIBAVCODEC_VERSION_MAJOR < 54 && !(LIBAVCODEC_VERSION_MAJOR == 53 && LIBAVCODEC_VERSION_MINOR >= 25)
 			read = avcodec_decode_audio3(av_ctx, buffer_data, &buffer_size, &pkt);
 			if (read < 0) {
 				GST_WARNING_OBJECT(self, "error: %i", read);
@@ -329,7 +329,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 				ret = gst_pad_push(self->srcpad, out_buf);
 			}
-#if LIBAVCODEC_VERSION_MAJOR >= 54
+#if LIBAVCODEC_VERSION_MAJOR >= 54 || (LIBAVCODEC_VERSION_MAJOR == 53 && LIBAVCODEC_VERSION_MINOR >= 25)
 next:
 #endif
 			pkt.size -= read;
