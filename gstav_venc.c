@@ -80,7 +80,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			ctx->width, ctx->height);
 
 	{
-		AVRational bq = { 1, GST_SECOND };
+		AVRational bq = { 1, GST_SECOND * ctx->ticks_per_frame};
 		frame->pts = av_rescale_q(buf->timestamp / ctx->ticks_per_frame, bq, ctx->time_base);
 	}
 
@@ -97,7 +97,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	memcpy(out_buf->data, self->buffer, read);
 	gst_buffer_set_caps(out_buf, self->srcpad->caps);
 	{
-		AVRational bq = { 1, GST_SECOND };
+		AVRational bq = { 1, GST_SECOND * ctx->ticks_per_frame};
 		out_buf->timestamp = av_rescale_q(ctx->coded_frame->pts, ctx->time_base, bq);
 	}
 	ret = gst_pad_push(self->srcpad, out_buf);
