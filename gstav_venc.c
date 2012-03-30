@@ -33,7 +33,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	struct obj *self;
 	GstFlowReturn ret = GST_FLOW_OK;
 	AVCodecContext *ctx;
-	AVFrame *frame;
+	AVFrame *frame = NULL;
 	int read;
 	GstBuffer *out_buf;
 
@@ -98,6 +98,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	ret = gst_pad_push(self->srcpad, out_buf);
 
 leave:
+	av_free(frame);
 	gst_buffer_unref(buf);
 
 	return ret;
