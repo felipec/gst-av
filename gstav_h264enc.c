@@ -12,6 +12,7 @@
 #include "plugin.h"
 
 #include <libavcodec/avcodec.h>
+#include <libavutil/opt.h>
 #include <gst/tag/tag.h>
 
 #include <stdlib.h>
@@ -34,41 +35,10 @@ struct obj_class {
 
 static void init_ctx(struct gst_av_venc *base, AVCodecContext *ctx)
 {
-	ctx->flags = 0;
-	ctx->flags2 = 0;
-	ctx->partitions = 0;
+	av_opt_set(ctx->priv_data, "preset", "medium", 0);
+	av_opt_set(ctx->priv_data, "profile", "baseline", 0);
 
-	/* medium */
-	ctx->coder_type = 1;
-	ctx->flags |= CODEC_FLAG_LOOP_FILTER;
-	ctx->me_cmp = FF_CMP_CHROMA;
-	ctx->partitions |= X264_PART_I8X8 | X264_PART_I4X4 | X264_PART_P8X8 | X264_PART_B8X8;
-	ctx->me_method = ME_HEX;
-	ctx->me_subpel_quality = 7;
-	ctx->me_range = 16;
-	ctx->gop_size = 250;
-	ctx->keyint_min = 25;
-	ctx->scenechange_threshold = 40;
-	ctx->i_quant_factor = 0.71;
-	ctx->b_frame_strategy = 1;
-	ctx->qcompress = 0.6;
-	ctx->qmin = 10;
-	ctx->qmin = 51;
-	ctx->max_qdiff = 4;
-	ctx->max_b_frames = 3;
-	ctx->refs = 3;
-	ctx->directpred = 1;
-	ctx->directpred = 1;
-	ctx->psy_trellis = 1.0;
-	ctx->flags2 |= CODEC_FLAG2_BPYRAMID | CODEC_FLAG2_MIXED_REFS | \
-		       CODEC_FLAG2_WPRED | CODEC_FLAG2_8X8DCT | CODEC_FLAG2_FASTPSKIP;
-	ctx->weighted_p_pred = 2;
-
-	/* baseline */
-	ctx->coder_type = 0;
-	ctx->flags2 &= ~(CODEC_FLAG2_WPRED | CODEC_FLAG2_8X8DCT);
-	ctx->weighted_p_pred = 0;
-	ctx->max_b_frames = 0;
+	ctx->flags2 = CODEC_FLAG2_BPYRAMID | CODEC_FLAG2_MIXED_REFS | CODEC_FLAG2_FASTPSKIP;
 }
 
 static GstStateChangeReturn
