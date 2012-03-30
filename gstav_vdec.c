@@ -9,6 +9,7 @@
 
 #include "gstav_vdec.h"
 #include "plugin.h"
+#include "util.h"
 
 #include <libavcodec/avcodec.h>
 #include <gst/tag/tag.h>
@@ -87,14 +88,17 @@ static int reget_buffer(AVCodecContext *avctx, AVFrame *pic)
 static GstBuffer *convert_frame(struct obj *self, AVFrame *frame)
 {
 	GstBuffer *out_buf;
+	int64_t v;
 
 	out_buf = frame->opaque;
 
 #if LIBAVCODEC_VERSION_MAJOR < 53
-	out_buf->timestamp = frame->reordered_opaque;
+	v = frame->reordered_opaque;
 #else
-	out_buf->timestamp = frame->pkt_pts;
+	v = frame->pkt_pts;
 #endif
+
+	out_buf->timestamp = gstav_pts_to_timestamp(self->av_ctx, v);
 
 	return out_buf;
 }
@@ -161,7 +165,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 	frame = avcodec_alloc_frame();
 
-	pkt.pts = buf->timestamp;
+	pkt.pts = gstav_timestamp_to_pts(ctx, buf->timestamp);
 #if LIBAVCODEC_VERSION_MAJOR < 53
 	ctx->reordered_opaque = pkt.pts;
 #endif
