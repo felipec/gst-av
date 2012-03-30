@@ -93,8 +93,10 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	}
 
 	out_buf->size = read;
-	out_buf->timestamp = buf->timestamp;
-	out_buf->duration = buf->duration;
+	{
+		AVRational bq = { 1, GST_SECOND };
+		out_buf->timestamp = av_rescale_q(ctx->coded_frame->pts, ctx->time_base, bq);
+	}
 	ret = gst_pad_push(self->srcpad, out_buf);
 
 leave:
