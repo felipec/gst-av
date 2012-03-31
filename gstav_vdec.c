@@ -12,6 +12,7 @@
 #include "util.h"
 
 #include <libavcodec/avcodec.h>
+#include <libavutil/imgutils.h>
 #include <gst/tag/tag.h>
 
 #include <stdlib.h>
@@ -35,24 +36,36 @@ static int get_buffer(AVCodecContext *avctx, AVFrame *pic)
 	GstBuffer *out_buf;
 	GstFlowReturn ret;
 	struct obj *self = avctx->opaque;
+	int width = avctx->width;
+	int height = avctx->height;
 
-	ret = gst_pad_alloc_buffer_and_set_caps(self->srcpad, 0,
-			avctx->width * avctx->height * 3 / 2,
-			self->srcpad->caps, &out_buf);
-	if (ret != GST_FLOW_OK)
-		return 1;
+	avcodec_align_dimensions(avctx, &width, &height);
 
-	gst_buffer_ref(out_buf);
+	pic->linesize[0] = width;
+	pic->linesize[1] = width / 2;
+	pic->linesize[2] = width / 2;
 
-	pic->opaque = out_buf;
+	if (avctx->width == width && avctx->height == height) {
+		ret = gst_pad_alloc_buffer_and_set_caps(self->srcpad, 0,
+				width * height * 3 / 2,
+				self->srcpad->caps, &out_buf);
+		if (ret != GST_FLOW_OK)
+			return 1;
+		gst_buffer_ref(out_buf);
+		pic->opaque = out_buf;
+
+		pic->data[0] = out_buf->data;
+		pic->data[1] = pic->data[0] + pic->linesize[0] * height;
+		pic->data[2] = pic->data[1] + pic->linesize[1] * height / 2;
+	} else {
+		ret = av_image_alloc(pic->base, pic->linesize, width, height, avctx->pix_fmt, 1);
+		if (ret < 0)
+			return ret;
+		for (unsigned i = 0; i < 3; i++)
+			pic->data[i] = pic->base[i];
+	}
+
 	pic->type = FF_BUFFER_TYPE_USER;
-
-	pic->data[0] = out_buf->data;
-	pic->linesize[0] = avctx->width;
-	pic->data[1] = pic->data[0] + pic->linesize[0] * avctx->height;
-	pic->linesize[1] = avctx->width / 2;
-	pic->data[2] = pic->data[1] + pic->linesize[1] * avctx->height / 2;
-	pic->linesize[2] = avctx->width / 2;
 
 	if (avctx->pkt)
 		pic->pkt_pts = avctx->pkt->pts;
@@ -64,10 +77,12 @@ static int get_buffer(AVCodecContext *avctx, AVFrame *pic)
 
 static void release_buffer(AVCodecContext *avctx, AVFrame *pic)
 {
+	av_free(pic->base[0]);
 	for (int i = 0; i < 3; i++)
-		pic->data[i] = NULL;
+		pic->base[i] = pic->data[i] = NULL;
 
-	gst_buffer_unref(pic->opaque);
+	if (pic->opaque)
+		gst_buffer_unref(pic->opaque);
 }
 
 static int reget_buffer(AVCodecContext *avctx, AVFrame *pic)
@@ -91,6 +106,26 @@ static GstBuffer *convert_frame(struct obj *self, AVFrame *frame)
 	int64_t v;
 
 	out_buf = frame->opaque;
+
+	if (!out_buf) {
+		AVCodecContext *ctx;
+		int i;
+		guint8 *p;
+
+		ctx = self->av_ctx;
+		out_buf = gst_buffer_new_and_alloc(ctx->width * ctx->height * 3 / 2);
+		gst_buffer_set_caps(out_buf, self->srcpad->caps);
+
+		p = out_buf->data;
+		for (i = 0; i < ctx->height; i++)
+			memcpy(p + i * ctx->width, frame->data[0] + i * frame->linesize[0], ctx->width);
+		p = out_buf->data + ctx->width * ctx->height;
+		for (i = 0; i < ctx->height / 2; i++)
+			memcpy(p + i * ctx->width / 2, frame->data[1] + i * frame->linesize[1], ctx->width / 2);
+		p = out_buf->data + ctx->width * ctx->height * 5 / 4;
+		for (i = 0; i < ctx->height / 2; i++)
+			memcpy(p + i * ctx->width / 2, frame->data[2] + i * frame->linesize[2], ctx->width / 2);
+	}
 
 #if LIBAVCODEC_VERSION_MAJOR < 53
 	v = frame->reordered_opaque;
