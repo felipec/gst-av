@@ -31,6 +31,13 @@ struct obj_class {
 	GstElementClass parent_class;
 };
 
+#if LIBAVUTIL_VERSION_MAJOR < 52 && !(LIBAVUTIL_VERSION_MAJOR == 51 && LIBAVUTIL_VERSION_MINOR >= 12)
+static int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
+{
+	return av_set_string3(obj, name, val, 0, NULL);
+}
+#endif
+
 static void init_ctx(struct gst_av_venc *base, AVCodecContext *ctx)
 {
 	av_opt_set(ctx->priv_data, "preset", "medium", 0);
