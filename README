@@ -1,0 +1,5 @@
+gst-av is a GStreamer plug-in to provide support for libav (fork of FFmpeg), it
+is similar to gst-ffmpeg, but all libav codecs are supported, even if there are
+native GStreamer alternatives; VP8, MP3, Ogg, Vorbis, AAC, etc.
+
+It should work for multiple versions of both libav and FFmpeg.
