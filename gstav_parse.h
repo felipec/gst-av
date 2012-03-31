@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Felipe Contreras
  * Copyright (C) 2009 Marco Ballesio
  *
  * Authors:
