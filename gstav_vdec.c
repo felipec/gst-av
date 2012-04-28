@@ -31,6 +31,8 @@ struct obj_class {
 	GstElementClass parent_class;
 };
 
+#define ROUND_UP(num, scale) (((num) + ((scale) - 1)) & ~((scale) - 1))
+
 static int get_buffer(AVCodecContext *avctx, AVFrame *pic)
 {
 	GstBuffer *out_buf;
@@ -111,20 +113,24 @@ static GstBuffer *convert_frame(struct obj *self, AVFrame *frame)
 		AVCodecContext *ctx;
 		int i;
 		guint8 *p;
+		int width, height;
 
 		ctx = self->av_ctx;
-		out_buf = gst_buffer_new_and_alloc(ctx->width * ctx->height * 3 / 2);
+		width = ROUND_UP(ctx->width, 4);
+		height = ctx->height;
+
+		out_buf = gst_buffer_new_and_alloc(width * height * 3 / 2);
 		gst_buffer_set_caps(out_buf, self->srcpad->caps);
 
 		p = out_buf->data;
-		for (i = 0; i < ctx->height; i++)
-			memcpy(p + i * ctx->width, frame->data[0] + i * frame->linesize[0], ctx->width);
-		p = out_buf->data + ctx->width * ctx->height;
-		for (i = 0; i < ctx->height / 2; i++)
-			memcpy(p + i * ctx->width / 2, frame->data[1] + i * frame->linesize[1], ctx->width / 2);
-		p = out_buf->data + ctx->width * ctx->height * 5 / 4;
-		for (i = 0; i < ctx->height / 2; i++)
-			memcpy(p + i * ctx->width / 2, frame->data[2] + i * frame->linesize[2], ctx->width / 2);
+		for (i = 0; i < height; i++)
+			memcpy(p + i * width, frame->data[0] + i * frame->linesize[0], width);
+		p = out_buf->data + width * height;
+		for (i = 0; i < height / 2; i++)
+			memcpy(p + i * width / 2, frame->data[1] + i * frame->linesize[1], width / 2);
+		p = out_buf->data + width * height * 5 / 4;
+		for (i = 0; i < height / 2; i++)
+			memcpy(p + i * width / 2, frame->data[2] + i * frame->linesize[2], width / 2);
 	}
 
 #if LIBAVCODEC_VERSION_MAJOR < 53
