@@ -95,6 +95,13 @@ static inline uint32_t av_read32_be(const uint8_t *p)
 	 ((const uint8_t *)(x))[3])
 #endif
 
+#ifndef AV_WB16
+#define AV_WB16(p, d) do { \
+	((uint8_t *)(p))[1] = (d); \
+	((uint8_t *)(p))[0] = (d) >> 8; \
+} while(0)
+#endif
+
 static inline unsigned get_bits(struct get_bit_context *s, int n)
 {
 	unsigned index = s->index;
