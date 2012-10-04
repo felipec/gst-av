@@ -290,7 +290,7 @@ static void get_theora_extradata(AVCodecContext *ctx,
 	}
 
 	/* fill it up */
-	ctx->extradata = p = malloc(size + FF_INPUT_BUFFER_PADDING_SIZE);
+	ctx->extradata = p = av_mallocz(size + FF_INPUT_BUFFER_PADDING_SIZE);
 	for (unsigned i = 0; i < gst_value_array_get_size(array); i++) {
 		value = gst_value_array_get_value(array, i);
 		buf = gst_value_get_buffer(value);
@@ -451,8 +451,9 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	buf = gst_value_get_buffer(codec_data);
 	if (!buf)
 		goto next;
-	ctx->extradata = malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
+	ctx->extradata = av_malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
 	memcpy(ctx->extradata, buf->data, buf->size);
+	memset(ctx->extradata + buf->size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 	ctx->extradata_size = buf->size;
 
 	if (self->parse_func)
