@@ -448,9 +448,21 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 		codec_id = CODEC_ID_VORBIS;
 	else if (strcmp(name, "audio/x-flac") == 0)
 		codec_id = CODEC_ID_FLAC;
-	else if (strcmp(name, "audio/mpeg") == 0)
-		codec_id = CODEC_ID_MP3;
-	else
+	else if (strcmp(name, "audio/mpeg") == 0) {
+		int version;
+		gst_structure_get_int(in_struc, "mpegversion", &version);
+		switch (version) {
+		case 1:
+			codec_id = CODEC_ID_MP3;
+			break;
+		case 2:
+		case 4:
+			codec_id = CODEC_ID_AAC;
+			break;
+		default:
+			codec_id = CODEC_ID_NONE;
+		}
+	} else
 		codec_id = CODEC_ID_NONE;
 
 	self->codec = avcodec_find_decoder(codec_id);
@@ -486,7 +498,8 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 		ctx->extradata_size = buf->size;
 		break;
 	}
-	case CODEC_ID_MP3: {
+	case CODEC_ID_MP3:
+	case CODEC_ID_AAC: {
 		gst_structure_get_int(in_struc, "rate", &ctx->sample_rate);
 		gst_structure_get_int(in_struc, "channels", &ctx->channels);
 		break;
@@ -548,6 +561,13 @@ generate_sink_template(void)
 			"mpegversion", G_TYPE_INT, 1,
 			"layer", GST_TYPE_INT_RANGE, 1, 3,
 			"parsed", G_TYPE_BOOLEAN, TRUE,
+			NULL);
+
+	gst_caps_append_structure(caps, struc);
+
+	struc = gst_structure_new("audio/mpeg",
+			"mpegversion", G_TYPE_INT, 4,
+			"framed", G_TYPE_BOOLEAN, TRUE,
 			NULL);
 
 	gst_caps_append_structure(caps, struc);
