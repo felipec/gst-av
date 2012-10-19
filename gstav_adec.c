@@ -48,6 +48,7 @@ struct obj {
 	int (*header_func)(struct obj *self, GstBuffer *buf);
 	uint64_t next_timestamp;
 	int bps;
+	GMutex *mutex;
 };
 
 struct obj_class {
@@ -272,7 +273,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			buffer_data = self->buffer_data + self->ring.in;
 			buffer_size = self->buffer_size - self->ring.in;
 #if LIBAVCODEC_VERSION_MAJOR < 54 && !(LIBAVCODEC_VERSION_MAJOR == 53 && LIBAVCODEC_VERSION_MINOR >= 25)
+			g_mutex_lock(self->mutex);
 			read = avcodec_decode_audio3(av_ctx, buffer_data, &buffer_size, &pkt);
+			g_mutex_unlock(self->mutex);
 			if (read < 0) {
 				GST_WARNING_OBJECT(self, "error: %i", read);
 				break;
@@ -281,7 +284,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			AVFrame frame;
 			int got_frame = 0, planar, plane_size;
 
+			g_mutex_lock(self->mutex);
 			read = avcodec_decode_audio4(av_ctx, &frame, &got_frame, &pkt);
+			g_mutex_unlock(self->mutex);
 			if (read < 0) {
 				GST_WARNING_OBJECT(self, "error: %i", read);
 				break;
@@ -398,6 +403,9 @@ sink_event(GstPad *pad, GstEvent *event)
 	switch (event->type) {
 	case GST_EVENT_FLUSH_START:
 		self->timestamp = GST_CLOCK_TIME_NONE;
+		g_mutex_lock(self->mutex);
+		avcodec_flush_buffers(self->av_ctx);
+		g_mutex_unlock(self->mutex);
 		break;
 	case GST_EVENT_EOS: {
 		/* flush current buffer */
@@ -599,6 +607,15 @@ instance_init(GTypeInstance *instance, void *g_class)
 
 	self->header_func = default_header;
 	self->timestamp = GST_CLOCK_TIME_NONE;
+	self->mutex = g_mutex_new();
+}
+
+static void
+finalize(GObject *obj)
+{
+	struct obj *self = (struct obj *)obj;
+	g_mutex_free(self->mutex);
+	((GObjectClass *)parent_class)->finalize(obj);
 }
 
 static void
@@ -630,10 +647,12 @@ static void
 class_init(void *g_class, void *class_data)
 {
 	GstElementClass *gstelement_class = g_class;
+	GObjectClass *gobject_class = g_class;
 
 	parent_class = g_type_class_ref(GST_TYPE_ELEMENT);
 
 	gstelement_class->change_state = change_state;
+	gobject_class->finalize = finalize;
 }
 
 GType

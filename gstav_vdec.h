@@ -25,6 +25,7 @@ struct gst_av_vdec {
 	AVCodecContext *av_ctx;
 	bool initialized;
 	bool (*parse_func)(struct gst_av_vdec *vdec, GstBuffer *buf);
+	GMutex *mutex;
 };
 
 #endif /* GST_AV_VDEC_H */
