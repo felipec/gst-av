@@ -479,6 +479,7 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 
 		ctx->extradata = malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
 		memcpy(ctx->extradata, buf->data, buf->size);
+		memset(ctx->extradata + buf->size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 		ctx->extradata_size = buf->size;
 		break;
 	}
