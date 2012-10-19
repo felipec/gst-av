@@ -397,7 +397,6 @@ sink_event(GstPad *pad, GstEvent *event)
 
 	switch (event->type) {
 	case GST_EVENT_FLUSH_START:
-		ret = gst_pad_push_event(self->srcpad, event);
 		self->timestamp = GST_CLOCK_TIME_NONE;
 		break;
 	case GST_EVENT_EOS: {
@@ -415,13 +414,13 @@ sink_event(GstPad *pad, GstEvent *event)
 		r = gst_pad_push(self->srcpad, out_buf);
 		if (r != GST_FLOW_OK)
 			goto leave;
-		ret = gst_pad_push_event(self->srcpad, event);
 		break;
 	}
 	default:
-		ret = gst_pad_push_event(self->srcpad, event);
 		break;
 	}
+
+	ret = gst_pad_push_event(self->srcpad, event);
 
 leave:
 	gst_object_unref(self);
