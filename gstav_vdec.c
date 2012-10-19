@@ -34,6 +34,8 @@ struct obj_class {
 
 #define ROUND_UP(num, scale) (((num) + ((scale) - 1)) & ~((scale) - 1))
 
+static void get_delayed(struct obj *self);
+
 static int get_buffer(AVCodecContext *avctx, AVFrame *pic)
 {
 	GstBuffer *out_buf;
@@ -319,6 +321,15 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 
 	self = (struct obj *)((GstObject *)pad)->parent;
 	ctx = self->av_ctx;
+
+	if (ctx) {
+		/* reset */
+		get_delayed(self);
+		gst_av_codec_close(ctx);
+		av_freep(&ctx->extradata);
+		av_freep(&self->av_ctx);
+		self->initialized = false;
+	}
 
 	in_struc = gst_caps_get_structure(caps, 0);
 
