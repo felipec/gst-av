@@ -436,6 +436,8 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	const char *name;
 	int codec_id;
 	AVCodecContext *ctx;
+	const GValue *codec_data;
+	GstBuffer *buf;
 
 	self = (struct obj *)((GstObject *)pad)->parent;
 
@@ -490,6 +492,19 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 		break;
 	}
 	}
+
+	codec_data = gst_structure_get_value(in_struc, "codec_data");
+	if (!codec_data)
+		goto next;
+	buf = gst_value_get_buffer(codec_data);
+	if (!buf)
+		goto next;
+	ctx->extradata = av_malloc(buf->size + FF_INPUT_BUFFER_PADDING_SIZE);
+	memcpy(ctx->extradata, buf->data, buf->size);
+	memset(ctx->extradata + buf->size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+	ctx->extradata_size = buf->size;
+
+next:
 	return true;
 }
 
