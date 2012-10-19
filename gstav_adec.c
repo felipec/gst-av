@@ -255,7 +255,8 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		} else if (self->next_timestamp != buf->timestamp) {
 			int64_t adj = self->next_timestamp - self->timestamp;
 
-			GST_WARNING_OBJECT(self, "reseting timestamp");
+			GST_DEBUG_OBJECT(self, "reseting timestamp: %li ns",
+					buf->timestamp - self->next_timestamp);
 			self->next_timestamp = self->timestamp = buf->timestamp;
 			self->timestamp -= adj;
 		}
