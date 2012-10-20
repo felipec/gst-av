@@ -265,7 +265,8 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 			self->timestamp -= progress;
 		}
 
-		self->next_timestamp += buf->duration;
+		if (buf->duration != GST_CLOCK_TIME_NONE)
+			self->next_timestamp += buf->duration;
 
 		do {
 			void *buffer_data;
@@ -312,6 +313,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 				}
 			}
 #endif
+
+			if (buf->duration == GST_CLOCK_TIME_NONE)
+				self->next_timestamp += calculate_duration(self, buffer_size);
 
 			self->ring.in += buffer_size;
 			if (self->ring.in >= 2 * AVCODEC_MAX_AUDIO_FRAME_SIZE) {
