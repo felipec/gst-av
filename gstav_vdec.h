@@ -26,6 +26,13 @@ struct gst_av_vdec {
 	bool initialized;
 	bool (*parse_func)(struct gst_av_vdec *vdec, GstBuffer *buf);
 	GMutex *mutex;
+
+	/* thank you GStreamer */
+	bool is_dts;
+	int64_t last_pts;
+	int64_t last_dts;
+	int bad_pts;
+	int bad_dts;
 };
 
 #endif /* GST_AV_VDEC_H */

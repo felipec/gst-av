@@ -139,7 +139,18 @@ static GstBuffer *convert_frame(struct obj *self, AVFrame *frame)
 #if LIBAVCODEC_VERSION_MAJOR < 53
 	v = frame->reordered_opaque;
 #else
-	v = frame->pkt_pts;
+	if (frame->pkt_pts < self->last_pts)
+		self->bad_pts++;
+	if (frame->pkt_dts < self->last_dts)
+		self->bad_dts++;
+	self->last_pts = frame->pkt_pts;
+	self->last_dts = frame->pkt_dts;
+
+	/* Is GStreamer sending DTS or PTS? */
+	if (self->bad_pts <= self->bad_dts)
+		v = frame->pkt_pts;
+	else
+		v = frame->pkt_dts;
 #endif
 
 	out_buf->timestamp = gstav_pts_to_timestamp(self->av_ctx, v);
@@ -209,9 +220,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 	frame = avcodec_alloc_frame();
 
-	pkt.pts = gstav_timestamp_to_pts(ctx, buf->timestamp);
+	pkt.dts = pkt.pts = gstav_timestamp_to_pts(ctx, buf->timestamp);
 #if LIBAVCODEC_VERSION_MAJOR < 53
-	ctx->reordered_opaque = pkt.pts;
+	ctx->reordered_opaque = pkt.dts;
 #endif
 
 	g_mutex_lock(self->mutex);
