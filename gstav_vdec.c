@@ -328,7 +328,6 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	const GValue *codec_data;
 	GstBuffer *buf;
 	AVCodecContext *ctx;
-	bool chunks = false;
 
 	self = (struct obj *)((GstObject *)pad)->parent;
 	ctx = self->av_ctx;
@@ -347,13 +346,8 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	name = gst_structure_get_name(in_struc);
 	if (strcmp(name, "video/x-h263") == 0)
 		codec_id = CODEC_ID_H263;
-	else if (strcmp(name, "video/x-h264") == 0) {
-		const char *alignment;
-		alignment = gst_structure_get_string(in_struc, "alignment");
-		if (strcmp(alignment, "nal") == 0)
-			chunks = true;
+	else if (strcmp(name, "video/x-h264") == 0)
 		codec_id = CODEC_ID_H264;
-	}
 	else if (strcmp(name, "video/mpeg") == 0) {
 		int version;
 		gst_structure_get_int(in_struc, "mpegversion", &version);
@@ -449,8 +443,6 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 	ctx->reget_buffer = reget_buffer;
 	ctx->opaque = self;
 	ctx->flags |= CODEC_FLAG_EMU_EDGE;
-	if (chunks)
-		ctx->flags2 |= CODEC_FLAG2_CHUNKS;
 
 	gst_structure_get_int(in_struc, "width", &ctx->width);
 	gst_structure_get_int(in_struc, "height", &ctx->height);
@@ -514,6 +506,7 @@ generate_sink_template(void)
 	gst_caps_append_structure(caps, struc);
 
 	struc = gst_structure_new("video/x-h264",
+			"alignment", G_TYPE_STRING, "au",
 			NULL);
 
 	gst_caps_append_structure(caps, struc);
