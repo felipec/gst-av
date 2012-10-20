@@ -254,12 +254,12 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE)) {
 			self->next_timestamp = self->timestamp = buf->timestamp;
 		} else if (self->next_timestamp != buf->timestamp) {
-			int64_t adj = self->next_timestamp - self->timestamp;
+			int64_t progress = self->next_timestamp - self->timestamp;
 
 			GST_DEBUG_OBJECT(self, "reseting timestamp: %li ns",
 					buf->timestamp - self->next_timestamp);
 			self->next_timestamp = self->timestamp = buf->timestamp;
-			self->timestamp -= adj;
+			self->timestamp -= progress;
 		}
 
 		self->next_timestamp += buf->duration;
