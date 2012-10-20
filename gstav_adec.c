@@ -163,16 +163,19 @@ flac_header(struct obj *self, GstBuffer *buf)
 	return 1;
 }
 
+static inline uint32_t
+calculate_duration(struct obj *self, uint64_t size)
+{
+	uint32_t samples;
+	samples = size / (self->av_ctx->channels * (self->bps >> 3));
+	return gst_util_uint64_scale_int(samples, GST_SECOND, self->av_ctx->sample_rate);
+}
+
 static inline void
 calculate_timestamp(struct obj *self, GstBuffer *out_buf)
 {
-	uint32_t samples;
-
-	samples = out_buf->size / (self->av_ctx->channels * (self->bps >> 3));
-
 	out_buf->timestamp = self->timestamp;
-	out_buf->duration = gst_util_uint64_scale_int(samples, GST_SECOND, self->av_ctx->sample_rate);
-
+	out_buf->duration = calculate_duration(self, out_buf->size);
 	self->timestamp += out_buf->duration;
 }
 
