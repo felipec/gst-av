@@ -179,6 +179,21 @@ calculate_timestamp(struct obj *self, GstBuffer *out_buf)
 	self->timestamp += out_buf->duration;
 }
 
+static void
+check_timestamps(struct obj *self, GstBuffer *buf)
+{
+	if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE)) {
+		self->next_timestamp = self->timestamp = buf->timestamp;
+	} else if (self->next_timestamp != buf->timestamp) {
+		int64_t progress = self->next_timestamp - self->timestamp;
+
+		GST_DEBUG_OBJECT(self, "reseting timestamp: %li ns",
+				buf->timestamp - self->next_timestamp);
+		self->next_timestamp = self->timestamp = buf->timestamp;
+		self->timestamp -= progress;
+	}
+}
+
 static GstFlowReturn
 pad_chain(GstPad *pad, GstBuffer *buf)
 {
@@ -254,16 +269,7 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 		memcpy(pkt.data, buf->data, buf->size);
 		memset(pkt.data + pkt.size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 
-		if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE)) {
-			self->next_timestamp = self->timestamp = buf->timestamp;
-		} else if (self->next_timestamp != buf->timestamp) {
-			int64_t progress = self->next_timestamp - self->timestamp;
-
-			GST_DEBUG_OBJECT(self, "reseting timestamp: %li ns",
-					buf->timestamp - self->next_timestamp);
-			self->next_timestamp = self->timestamp = buf->timestamp;
-			self->timestamp -= progress;
-		}
+		check_timestamps(self, buf);
 
 		if (buf->duration != GST_CLOCK_TIME_NONE)
 			self->next_timestamp += buf->duration;
