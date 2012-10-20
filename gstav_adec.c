@@ -23,6 +23,7 @@
 static GstElementClass *parent_class;
 
 #define BUFFER_SIZE AVCODEC_MAX_AUDIO_FRAME_SIZE
+#define MAX_DIFF 20 * 1000000
 
 struct oggvorbis_private {
 	unsigned int len[3];
@@ -184,7 +185,7 @@ check_timestamps(struct obj *self, GstBuffer *buf)
 {
 	if (G_UNLIKELY(self->timestamp == GST_CLOCK_TIME_NONE)) {
 		self->next_timestamp = self->timestamp = buf->timestamp;
-	} else if (self->next_timestamp != buf->timestamp) {
+	} else if (abs(buf->timestamp - self->next_timestamp) > MAX_DIFF) {
 		int64_t progress = self->next_timestamp - self->timestamp;
 
 		GST_DEBUG_OBJECT(self, "reseting timestamp: %li ns",
