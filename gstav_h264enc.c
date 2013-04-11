@@ -42,8 +42,6 @@ static void init_ctx(struct gst_av_venc *base, AVCodecContext *ctx)
 {
 	av_opt_set(ctx->priv_data, "preset", "medium", 0);
 	av_opt_set(ctx->priv_data, "profile", "baseline", 0);
-
-	ctx->flags2 = CODEC_FLAG2_BPYRAMID | CODEC_FLAG2_MIXED_REFS | CODEC_FLAG2_FASTPSKIP;
 }
 
 static GstCaps *

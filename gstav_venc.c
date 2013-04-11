@@ -170,8 +170,6 @@ sink_setcaps(GstPad *pad, GstCaps *caps)
 			&ctx->time_base.den, &ctx->time_base.num);
 
 	ctx->pix_fmt = PIX_FMT_YUV420P;
-	ctx->rtp_payload_size = 1;
-	ctx->me_method = ME_ZERO;
 
 	free(self->buffer);
 	self->buffer_size = ctx->width * ctx->height * 2;
