@@ -37,6 +37,12 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	AVFrame *frame = NULL;
 	int read;
 	GstBuffer *out_buf;
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+	AVPacket pkt;
+	int r, got_packet = 0;
+#endif
+	int64_t pts;
+
 
 	self = (struct obj *)((GstObject *)pad)->parent;
 	ctx = self->av_ctx;
@@ -82,6 +88,23 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 
 	frame->pts = gstav_timestamp_to_pts(ctx, buf->timestamp);
 
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+	av_init_packet(&pkt);
+	pkt.data = self->buffer;
+	pkt.size = self->buffer_size;
+
+	r = avcodec_encode_video2(ctx, &pkt, frame, &got_packet);
+	if (r) {
+		ret = GST_FLOW_ERROR;
+		goto leave;
+	}
+
+	if (!got_packet)
+		goto leave;
+
+	pts = pkt.pts;
+	read = pkt.size;
+#else
 	read = avcodec_encode_video(ctx, self->buffer, self->buffer_size, frame);
 	if (read < 0) {
 		ret = GST_FLOW_ERROR;
@@ -91,11 +114,18 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	if (read == 0)
 		goto leave;
 
+	pts = ctx->coded_frame->pts;
+#endif
+
 	out_buf = gst_buffer_new_and_alloc(read);
 	memcpy(out_buf->data, self->buffer, read);
 	gst_buffer_set_caps(out_buf, self->srcpad->caps);
-	out_buf->timestamp = gstav_pts_to_timestamp(ctx, ctx->coded_frame->pts);
+	out_buf->timestamp = gstav_pts_to_timestamp(ctx, pts);
 	ret = gst_pad_push(self->srcpad, out_buf);
+
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+	av_free_packet(&pkt);
+#endif
 
 leave:
 	av_free(frame);
