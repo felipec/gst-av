@@ -42,6 +42,8 @@ static void init_ctx(struct gst_av_venc *base, AVCodecContext *ctx)
 {
 	av_opt_set(ctx->priv_data, "preset", "medium", 0);
 	av_opt_set(ctx->priv_data, "profile", "baseline", 0);
+	av_opt_set(ctx->priv_data, "x264opts", "annexb=1", 0);
+	av_opt_set_int(ctx->priv_data, "aud", 1, 0);
 }
 
 static GstCaps *
@@ -53,6 +55,8 @@ generate_src_template(void)
 	caps = gst_caps_new_empty();
 
 	struc = gst_structure_new("video/x-h264",
+			"stream-format", G_TYPE_STRING, "byte-stream",
+			"alignment", G_TYPE_STRING, "au",
 			NULL);
 
 	gst_caps_append_structure(caps, struc);
