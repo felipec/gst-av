@@ -13,6 +13,9 @@
  */
 
 #include <gst/gst.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "gstav_vdec.h"
 
 #include "gstav_parse.h"
