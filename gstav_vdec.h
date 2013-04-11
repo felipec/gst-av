@@ -25,7 +25,7 @@ struct gst_av_vdec {
 	AVCodecContext *av_ctx;
 	bool initialized;
 	bool (*parse_func)(struct gst_av_vdec *vdec, GstBuffer *buf);
-	GMutex *mutex;
+	GMutex mutex;
 
 	/* thank you GStreamer */
 	bool is_dts;

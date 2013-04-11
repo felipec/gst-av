@@ -226,9 +226,9 @@ pad_chain(GstPad *pad, GstBuffer *buf)
 	ctx->reordered_opaque = pkt.dts;
 #endif
 
-	g_mutex_lock(self->mutex);
+	g_mutex_lock(&self->mutex);
 	read = avcodec_decode_video2(ctx, frame, &got_pic, &pkt);
-	g_mutex_unlock(self->mutex);
+	g_mutex_unlock(&self->mutex);
 	av_free_packet(&pkt);
 	if (read < 0) {
 		GST_WARNING_OBJECT(self, "error: %i", read);
@@ -589,9 +589,9 @@ static gboolean sink_event(GstPad *pad, GstEvent *event)
 		get_delayed(self);
 		break;
 	case GST_EVENT_FLUSH_START:
-		g_mutex_lock(self->mutex);
+		g_mutex_lock(&self->mutex);
 		avcodec_flush_buffers(self->av_ctx);
-		g_mutex_unlock(self->mutex);
+		g_mutex_unlock(&self->mutex);
 		break;
 	default:
 		break;
@@ -625,14 +625,14 @@ instance_init(GTypeInstance *instance, void *g_class)
 	gst_element_add_pad((GstElement *)self, self->srcpad);
 
 	gst_pad_set_setcaps_function(self->sinkpad, sink_setcaps);
-	self->mutex = g_mutex_new();
+	g_mutex_init(&self->mutex);
 }
 
 static void
 finalize(GObject *obj)
 {
 	struct obj *self = (struct obj *)obj;
-	g_mutex_free(self->mutex);
+	g_mutex_clear(&self->mutex);
 	((GObjectClass *)parent_class)->finalize(obj);
 }
 
