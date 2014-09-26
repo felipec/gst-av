@@ -165,7 +165,7 @@ flac_header(struct obj *self, GstBuffer *buf)
 	return 1;
 }
 
-static inline uint32_t
+static inline uint64_t
 calculate_duration(struct obj *self, uint64_t size)
 {
 	uint32_t samples;
